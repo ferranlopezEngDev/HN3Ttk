@@ -389,6 +389,29 @@ def test_duplicate_node_id_raises_error() -> None:
     else:
         raise AssertionError("Expected ValueError for duplicated node id.")
 
+def test_system_from_dict_round_trip() -> None:
+    from hn3ttk.system import system_from_dict, system_to_dict
+
+    system = build_single_pipe_system()
+
+    data = system_to_dict(system)
+    rebuilt = system_from_dict(data)
+
+    assert rebuilt.id == system.id
+    assert set(rebuilt.nodes.keys()) == set(system.nodes.keys())
+    assert set(rebuilt.connections.keys()) == set(system.connections.keys())
+    assert set(rebuilt.links.keys()) == set(system.links.keys())
+
+    original_residuals = system.nodal_flow_residuals([5.0])
+    rebuilt_residuals = rebuilt.nodal_flow_residuals([5.0])
+
+    assert original_residuals == rebuilt_residuals
+
+    original_state = system.evaluate_state([5.0])
+    rebuilt_state = rebuilt.evaluate_state([5.0])
+
+    assert original_state["residuals"]["max_abs"] == rebuilt_state["residuals"]["max_abs"]
+    assert original_state["links"]["link_1"]["flow_rate"] == rebuilt_state["links"]["link_1"]["flow_rate"]
 
 if __name__ == "__main__":
     test_link_creation()
@@ -406,5 +429,6 @@ if __name__ == "__main__":
     test_system_to_dict()
     test_invalid_link_references_raise_error()
     test_duplicate_node_id_raises_error()
-
+    test_system_from_dict_round_trip()
+    
     print("All basic system tests passed.")

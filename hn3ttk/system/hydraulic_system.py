@@ -66,20 +66,23 @@ class HydraulicSystem:
         for node_id, node in self.nodes.items():
             if node_id != node.id:
                 raise ValueError(
-                    f"Node dictionary key '{node_id}' does not match node id '{node.id}'."
+                    f"Node dictionary key '{node_id}' does not match "
+                    f"node id '{node.id}'."
                 )
 
         for connection_id, connection in self.connections.items():
             if connection_id != connection.id:
                 raise ValueError(
                     "Connection dictionary key "
-                    f"'{connection_id}' does not match connection id '{connection.id}'."
+                    f"'{connection_id}' does not match "
+                    f"connection id '{connection.id}'."
                 )
 
         for link_id, link in self.links.items():
             if link_id != link.id:
                 raise ValueError(
-                    f"Link dictionary key '{link_id}' does not match link id '{link.id}'."
+                    f"Link dictionary key '{link_id}' does not match "
+                    f"link id '{link.id}'."
                 )
 
             self._validate_link_references(link)
@@ -282,13 +285,14 @@ class HydraulicSystem:
     # Residual assembly
     # ------------------------------------------------------------------
 
-    def nodal_flow_residuals(
+    def residuals_by_node(
         self,
         unknown_heads: list[float] | tuple[float, ...],
         alpha: float = 1.0,
-    ) -> list[float]:
+    ) -> dict[str, float]:
         """
-        Assemble mass-balance residuals for unknown-head nodes.
+        Assemble mass-balance residuals for unknown-head nodes and return them
+        as a dictionary indexed by node id.
 
         Residual convention:
 
@@ -302,8 +306,12 @@ class HydraulicSystem:
 
         At solution:
             residual = 0
+
+        Units:
+            m³/s
         """
         heads = self.heads_from_unknowns(unknown_heads, alpha)
+
         residual_by_node = {
             node_id: self.nodes[node_id].external_flow(alpha)
             for node_id in self.unknown_head_node_ids()
@@ -318,10 +326,140 @@ class HydraulicSystem:
             if link.to_node_id in residual_by_node:
                 residual_by_node[link.to_node_id] += q
 
+        return residual_by_node
+
+    def nodal_flow_residuals(
+        self,
+        unknown_heads: list[float] | tuple[float, ...],
+        alpha: float = 1.0,
+    ) -> list[float]:
+        """
+        Assemble mass-balance residuals for unknown-head nodes.
+
+        This method returns the residual vector in the same order as
+        unknown_head_node_ids(), so it is suitable for nonlinear solvers.
+
+        Residual convention:
+
+            residual = external_flow + inflow_from_links - outflow_to_links
+
+        At solution:
+            residual = 0
+
+        Units:
+            m³/s
+        """
+        residual_by_node = self.residuals_by_node(unknown_heads, alpha)
+
         return [
             residual_by_node[node_id]
             for node_id in self.unknown_head_node_ids()
         ]
+
+    def max_abs_residual(
+        self,
+        unknown_heads: list[float] | tuple[float, ...],
+        alpha: float = 1.0,
+    ) -> float:
+        """
+        Return the maximum absolute nodal residual.
+
+        Units:
+            m³/s
+        """
+        residuals = self.residuals_by_node(unknown_heads, alpha)
+
+        if not residuals:
+            return 0.0
+
+        return max(abs(value) for value in residuals.values())
+
+    # ------------------------------------------------------------------
+    # Result evaluation
+    # ------------------------------------------------------------------
+
+    def evaluate_state(
+        self,
+        unknown_heads: list[float] | tuple[float, ...],
+        alpha: float = 1.0,
+    ) -> dict[str, Any]:
+        """
+        Evaluate the complete hydraulic state of the system.
+
+        This method is intended for result inspection, export, debugging and
+        post-processing. It is not the solver residual vector.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing node results, link results, residuals and
+            global summary values.
+        """
+        heads = self.heads_from_unknowns(unknown_heads, alpha)
+        flows = self.all_link_flow_rates(heads)
+        residuals = self.residuals_by_node(unknown_heads, alpha)
+
+        node_results: dict[str, dict[str, Any]] = {}
+
+        for node_id, node in self.nodes.items():
+            head = heads[node_id]
+
+            node_results[node_id] = {
+                "id": node.id,
+                "type": node.type,
+                "head": head,
+                "elevation": node.elevation(),
+                "pressure_head": node.pressure_head(head=head),
+                "external_flow": node.external_flow(alpha),
+                "is_fixed_head": node.is_fixed_head(),
+                "is_unknown_head": node.is_unknown_head(),
+                "metadata": dict(node.metadata),
+            }
+
+        link_results: dict[str, dict[str, Any]] = {}
+
+        for link_id, link in self.links.items():
+            connection = self.get_connection(link.connection_id)
+            delta_h = self.link_delta_h(link_id, heads)
+            flow_rate = flows[link_id]
+
+            link_results[link_id] = {
+                "id": link.id,
+                "connection_id": link.connection_id,
+                "connection_type": connection.type,
+                "from_node_id": link.from_node_id,
+                "to_node_id": link.to_node_id,
+                "delta_h": delta_h,
+                "flow_rate": flow_rate,
+                "metadata": dict(link.metadata),
+            }
+
+        residual_vector = [
+            residuals[node_id]
+            for node_id in self.unknown_head_node_ids()
+        ]
+
+        max_abs_residual = (
+            0.0
+            if not residuals
+            else max(abs(value) for value in residuals.values())
+        )
+
+        return {
+            "system_id": self.id,
+            "alpha": float(alpha),
+            "unknown_node_ids": self.unknown_head_node_ids(),
+            "fixed_node_ids": self.fixed_head_node_ids(),
+            "unknown_heads": [float(value) for value in unknown_heads],
+            "nodes": node_results,
+            "links": link_results,
+            "residuals": {
+                "by_node": residuals,
+                "vector": residual_vector,
+                "max_abs": max_abs_residual,
+                "units": "m3/s",
+            },
+        }
 
     # ------------------------------------------------------------------
     # Serialization
