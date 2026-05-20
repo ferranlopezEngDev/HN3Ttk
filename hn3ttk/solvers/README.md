@@ -9,6 +9,8 @@ The currently implemented solvers are:
 - Damped Newton-Raphson
 - Alpha continuation using simple Newton-Raphson at each continuation step
 - Alpha continuation using damped Newton-Raphson at each continuation step
+- SciPy root wrappers
+- SciPy least_squares wrappers
 
 ## Simple Newton-Raphson
 
@@ -48,6 +50,30 @@ backtracking on a damping factor until the maximum absolute residual decreases.
 
 This provides a simple line-search style stabilization without changing the
 residual definition or the dense Jacobian assembly.
+
+## SciPy Wrappers
+
+The module also provides wrappers around SciPy nonlinear solvers:
+
+- `solve_scipy_root`
+- `solve_alpha_continuation_scipy_root`
+- `solve_scipy_least_squares`
+- `solve_alpha_continuation_scipy_least_squares`
+
+| HN3Ttk wrapper | SciPy function | Direct root | Continuation |
+|---|---|---|---|
+| solve_scipy_root | scipy.optimize.root | yes | no |
+| solve_alpha_continuation_scipy_root | scipy.optimize.root | yes | yes |
+| solve_scipy_least_squares | scipy.optimize.least_squares | residual minimization | no |
+| solve_alpha_continuation_scipy_least_squares | scipy.optimize.least_squares | residual minimization | yes |
+
+Notes:
+
+- `root` solves `R(H) = 0`.
+- `least_squares` minimizes `||R(H)||²`.
+- `use_jacobian=True` uses `system.dense_jacobian(...)` when the method allows it.
+- For `root`, the analytical Jacobian is used only with `"hybr"` and `"lm"`.
+- For `least_squares`, the analytical Jacobian is used whenever `use_jacobian=True`.
 
 ## Future Extensions
 
