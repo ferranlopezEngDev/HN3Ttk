@@ -27,6 +27,12 @@ dependencies = [
     "matplotlib"
 ]
 
+[project.urls]
+Homepage = "https://github.com/ferranlopezEngDev/HN3Ttk"
+Repository = "https://github.com/ferranlopezEngDev/HN3Ttk"
+Documentation = "https://github.com/ferranlopezEngDev/HN3Ttk/tree/main/docs"
+Issues = "https://github.com/ferranlopezEngDev/HN3Ttk/issues"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

@@ -11,6 +11,12 @@ It is especially useful for:
 - building small and medium teaching examples
 - exporting solver results to JSON and CSV
 
+For quick interactive use, HN3Ttk also exposes a convenience API through:
+
+```python
+from hn3ttk.api import *
+```
+
 ## Project Status
 
 HN3Ttk 0.1.0 is an academic prototype. It is intended for learning,

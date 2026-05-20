@@ -1,0 +1,9 @@
+include README.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include pyproject.toml
+include requirements-dev.txt
+recursive-include docs *.md
+recursive-include examples *.py *.md
+recursive-include tests *.py
+recursive-include hn3ttk *.md

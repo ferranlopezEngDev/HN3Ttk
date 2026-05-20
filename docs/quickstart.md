@@ -10,7 +10,22 @@ Install the package in editable mode:
 pip install -e .
 ```
 
-Basic imports:
+You can also install it directly from GitHub:
+
+Repository: [ferranlopezEngDev/HN3Ttk](https://github.com/ferranlopezEngDev/HN3Ttk)
+
+```bash
+pip install git+https://github.com/ferranlopezEngDev/HN3Ttk.git
+```
+
+If you want the shortest possible import path for quick experiments, you can
+use the convenience API:
+
+```python
+from hn3ttk.api import *
+```
+
+If you prefer explicit imports, use:
 
 ```python
 from hn3ttk.nodes import ReservoirNode, DemandNode
@@ -88,3 +103,14 @@ export_result_folder(result, "data/results/quickstart_single_pipe")
 The same example is available as a runnable script:
 
 `examples/01_single_pipe_step_by_step.py`
+
+For quick interactive work, you can also build and solve a benchmark with:
+
+```python
+from hn3ttk.api import *
+
+system = build_single_pipe_system()
+result = solve_newton_raphson(system)
+
+print_result_summary(result)
+```

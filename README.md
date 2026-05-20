@@ -28,9 +28,33 @@ design tool.
 
 ## Installation
 
+Install from a local clone in editable mode:
+
 ```bash
 pip install -e .
 ```
+
+Or install directly from GitHub:
+
+Repository: [ferranlopezEngDev/HN3Ttk](https://github.com/ferranlopezEngDev/HN3Ttk)
+
+```bash
+pip install git+https://github.com/ferranlopezEngDev/HN3Ttk.git
+```
+
+## Development
+
+Install the optional development tools with:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+To verify the repository before publishing changes, run the test scripts in
+`tests/` and the step-by-step examples in `examples/`.
+
+The repository is also prepared with a GitHub Actions CI workflow that compiles
+key modules and runs tests and examples on supported Python versions.
 
 ## Quickstart
 
@@ -38,6 +62,13 @@ For a beginner-friendly first example, see:
 
 - `docs/quickstart.md`
 - `examples/01_single_pipe_step_by_step.py`
+
+For quick experiments, notebooks and interactive use, you can also import the
+convenience API:
+
+```python
+from hn3ttk.api import *
+```
 
 ## Sign Conventions
 
