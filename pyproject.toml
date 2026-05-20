@@ -1,9 +1,25 @@
 [project]
 name = "hn3ttk"
-version = "0.0.1"
+version = "0.1.0"
 description = "Hydraulic Network Toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    {name = "Ferran López Sierra"}
+]
+keywords = [
+    "hydraulic networks",
+    "water distribution networks",
+    "nonlinear solvers",
+    "Newton-Raphson",
+    "SciPy",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 
 dependencies = [
     "numpy",
