@@ -184,6 +184,9 @@ class PolynomialRegressionConnection(Connection):
                 "inverse_max_iterations",
                 "head_tolerance",
                 "flow_tolerance",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "description": (
                 "Hydraulic connection fitted using polynomial regression from "

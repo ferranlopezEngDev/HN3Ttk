@@ -143,6 +143,9 @@ class SplineInterpolationConnection(Connection):
                 "head_losses",
                 "method",
                 "extrapolate",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "supported_methods": [
                 "pchip",

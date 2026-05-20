@@ -157,6 +157,9 @@ class PipeFixedPowerLaw(Connection):
                 "k",
                 "n",
                 "head_tolerance",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "description": (
                 "Fixed power-law pipe connection with constant k and n. "

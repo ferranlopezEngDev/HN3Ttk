@@ -63,6 +63,49 @@ def test_pipe_fixed_power_law() -> None:
     )
 
 
+def test_pipe_fixed_power_law_jacobian_derivative_modes() -> None:
+    connection = PipeFixedPowerLaw(
+        parameters={
+            "k": 100.0,
+            "n": 2.0,
+        }
+    )
+
+    assert connection.jacobian_derivative(-5.0, method="normal") < 0.0
+    assert connection.jacobian_derivative(-5.0, method="tendency") < 0.0
+    assert (
+        connection.jacobian_derivative(
+            -5.0,
+            method="inverse_head_loss",
+        )
+        < 0.0
+    )
+    assert (
+        connection.jacobian_derivative(
+            -5.0,
+            method="finite_difference",
+        )
+        < 0.0
+    )
+
+    connection.set_jacobian_derivative_mode("tendency")
+
+    assert connection.get_jacobian_derivative_mode() == "tendency"
+    assert isclose(
+        connection.jacobian_derivative(-5.0, method="default"),
+        connection.jacobian_derivative(-5.0, method="tendency"),
+        rel_tol=1.0e-12,
+        abs_tol=1.0e-12,
+    )
+
+    try:
+        connection.set_jacobian_derivative_mode("invalid_mode")
+    except ValueError as error:
+        assert "Invalid jacobian derivative mode" in str(error)
+    else:
+        raise AssertionError("Expected ValueError for invalid mode.")
+
+
 def test_pipe_darcy() -> None:
     connection = PipeDarcy(
         parameters={
@@ -161,6 +204,7 @@ def test_custom_factor_polynomial() -> None:
 
 if __name__ == "__main__":
     test_pipe_fixed_power_law()
+    test_pipe_fixed_power_law_jacobian_derivative_modes()
     test_pipe_darcy()
     test_pipe_local_power_law()
     test_linear_interpolation()

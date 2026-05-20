@@ -223,6 +223,9 @@ class PipeLocalPowerLaw(Connection):
                 "turbulent_reynolds",
                 "relative_band",
                 "minimum_flow_rate",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "description": (
                 "Pipe connection using Darcy-Weisbach friction factors and a "

@@ -259,6 +259,53 @@ unknown_head_node_ids()
 
 Fixed-head nodes are boundary conditions.
 
+---
+
+## Jacobian Assembly
+
+`HydraulicSystem` also provides dense Jacobian assembly with respect to the
+unknown nodal heads:
+
+```python
+dense_jacobian(unknown_heads, alpha=1.0, derivative_mode="default")
+jacobian(unknown_heads, alpha=1.0, derivative_mode="default")
+finite_difference_jacobian(
+    unknown_heads,
+    alpha=1.0,
+    relative_step=1.0e-6,
+    absolute_step=1.0e-8,
+)
+```
+
+Notes:
+
+```text
+dense_jacobian()              -> returns np.ndarray
+jacobian()                    -> alias of dense_jacobian()
+finite_difference_jacobian()  -> returns np.ndarray
+nodal_flow_residuals()        -> still returns list[float]
+```
+
+The `derivative_mode` used by `dense_jacobian()` can be:
+
+```text
+default
+normal
+tendency
+inverse_head_loss
+finite_difference
+```
+
+Difference between the two finite-difference approaches:
+
+```text
+derivative_mode="finite_difference":
+    local finite difference inside each connection for dQ/d(delta_h)
+
+finite_difference_jacobian():
+    global finite difference over the full residual vector R(H)
+```
+
 Unknown-head nodes are solver unknowns.
 
 Example:

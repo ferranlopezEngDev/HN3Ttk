@@ -89,10 +89,61 @@ The base class also provides:
 ```python
 head_loss_tendency(q)
 flow_rate_tendency(delta_h)
+jacobian_derivative(delta_h, method="default")
+get_jacobian_derivative_mode()
+set_jacobian_derivative_mode(mode)
 validate()
 to_dict()
 from_dict(data)
 model_info()
+```
+
+---
+
+## Jacobian Derivative Strategy
+
+Each connection can store a default jacobian derivative mode in:
+
+```python
+parameters["jacobian_derivative"]
+```
+
+Available methods are:
+
+```text
+normal
+tendency
+inverse_head_loss
+finite_difference
+```
+
+The special selector:
+
+```text
+default
+```
+
+means that `jacobian_derivative(...)` uses the mode configured in the
+connection itself. If no mode is provided, the default stored value is:
+
+```python
+parameters["jacobian_derivative"] = "normal"
+```
+
+Example:
+
+```python
+from hn3ttk.connections import PipeFixedPowerLaw
+
+pipe = PipeFixedPowerLaw(
+    parameters={
+        "k": 100.0,
+        "n": 2.0,
+        "jacobian_derivative": "tendency",
+    }
+)
+
+dq_dh = pipe.jacobian_derivative(-1.0)
 ```
 
 ---

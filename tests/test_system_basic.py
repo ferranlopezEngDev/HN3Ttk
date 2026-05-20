@@ -167,6 +167,12 @@ def test_fixed_and_unknown_node_ids() -> None:
     assert system.initial_unknown_heads() == [5.0]
 
 
+def test_unknown_head_index() -> None:
+    system = build_single_pipe_system()
+
+    assert system.unknown_head_index() == {"demand": 0}
+
+
 def test_heads_from_unknowns() -> None:
     system = build_single_pipe_system()
 
@@ -262,6 +268,64 @@ def test_nodal_flow_residuals_at_solution() -> None:
 
     assert len(residuals) == 1
     assert isclose(residuals[0], 0.0, rel_tol=1.0e-12, abs_tol=1.0e-12)
+
+
+def test_dense_jacobian_normal_and_global_finite_difference() -> None:
+    system = build_single_pipe_system()
+
+    jacobian = system.dense_jacobian([9.0], derivative_mode="normal")
+
+    assert jacobian.shape == (1, 1)
+    assert abs(jacobian[0, 0] - (-0.05)) < 1.0e-8
+
+    jacobian_fd = system.finite_difference_jacobian([9.0])
+
+    assert jacobian_fd.shape == (1, 1)
+    assert abs(jacobian_fd[0, 0] - jacobian[0, 0]) < 1.0e-5
+
+
+def test_dense_jacobian_derivative_modes() -> None:
+    system = build_single_pipe_system()
+    pipe = system.get_connection("pipe")
+
+    pipe.set_jacobian_derivative_mode("tendency")
+
+    jacobian_default = system.dense_jacobian([9.0], derivative_mode="default")
+    jacobian_normal = system.dense_jacobian([9.0], derivative_mode="normal")
+    jacobian_tendency = system.dense_jacobian([9.0], derivative_mode="tendency")
+    jacobian_inverse = system.dense_jacobian(
+        [9.0],
+        derivative_mode="inverse_head_loss",
+    )
+    jacobian_local_fd = system.dense_jacobian(
+        [9.0],
+        derivative_mode="finite_difference",
+    )
+    jacobian_alias = system.jacobian([9.0], derivative_mode="normal")
+
+    for jacobian in (
+        jacobian_default,
+        jacobian_normal,
+        jacobian_tendency,
+        jacobian_inverse,
+        jacobian_local_fd,
+        jacobian_alias,
+    ):
+        assert jacobian.shape == (1, 1)
+        assert jacobian[0, 0] < 0.0
+
+    assert isclose(
+        jacobian_default[0, 0],
+        jacobian_tendency[0, 0],
+        rel_tol=1.0e-12,
+        abs_tol=1.0e-12,
+    )
+    assert isclose(
+        jacobian_alias[0, 0],
+        jacobian_normal[0, 0],
+        rel_tol=1.0e-12,
+        abs_tol=1.0e-12,
+    )
 
 
 def test_reverse_flow_case() -> None:
@@ -419,12 +483,15 @@ if __name__ == "__main__":
     test_link_to_dict_and_from_dict()
     test_system_add_objects()
     test_fixed_and_unknown_node_ids()
+    test_unknown_head_index()
     test_heads_from_unknowns()
     test_link_delta_h()
     test_link_flow_rate()
     test_all_link_flow_rates()
     test_nodal_flow_residuals_at_initial_guess()
     test_nodal_flow_residuals_at_solution()
+    test_dense_jacobian_normal_and_global_finite_difference()
+    test_dense_jacobian_derivative_modes()
     test_reverse_flow_case()
     test_system_to_dict()
     test_invalid_link_references_raise_error()

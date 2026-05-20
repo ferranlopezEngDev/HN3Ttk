@@ -190,6 +190,9 @@ class CustomFactorPolynomialConnection(Connection):
                 "inverse_relative_tolerance",
                 "inverse_max_iterations",
                 "minimum_flow_rate",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "description": (
                 "Custom passive hydraulic connection based on a sum of signed "

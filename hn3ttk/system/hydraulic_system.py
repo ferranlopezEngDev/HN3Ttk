@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+import numpy as np
+
 from hn3ttk.connections import Connection
 from hn3ttk.nodes import Node
 from hn3ttk.system.link import Link
@@ -212,6 +214,13 @@ class HydraulicSystem:
             for node_id in self.unknown_head_node_ids()
         ]
 
+    def unknown_head_index(self) -> dict[str, int]:
+        """Return unknown-head node ids mapped to Jacobian indices."""
+        return {
+            node_id: index
+            for index, node_id in enumerate(self.unknown_head_node_ids())
+        }
+
     # ------------------------------------------------------------------
     # Hydraulic evaluation helpers
     # ------------------------------------------------------------------
@@ -373,6 +382,109 @@ class HydraulicSystem:
             return 0.0
 
         return max(abs(value) for value in residuals.values())
+
+    def dense_jacobian(
+        self,
+        unknown_heads: list[float] | tuple[float, ...],
+        alpha: float = 1.0,
+        derivative_mode: str = "default",
+    ) -> np.ndarray:
+        """
+        Assemble the dense Jacobian dR/dH for unknown-head node residuals.
+        """
+        Connection._validate_jacobian_derivative_mode(derivative_mode)
+
+        unknown_node_ids = self.unknown_head_node_ids()
+        unknown_index = self.unknown_head_index()
+        n_unknowns = len(unknown_node_ids)
+        jacobian = np.zeros((n_unknowns, n_unknowns), dtype=float)
+
+        if n_unknowns == 0:
+            return jacobian
+
+        heads = self.heads_from_unknowns(unknown_heads, alpha)
+
+        for link_id, link in self.links.items():
+            connection = self.get_connection(link.connection_id)
+            delta_h = self.link_delta_h(link_id, heads)
+            dq_dh = connection.jacobian_derivative(
+                delta_h,
+                method=derivative_mode,
+            )
+
+            from_index = unknown_index.get(link.from_node_id)
+            to_index = unknown_index.get(link.to_node_id)
+
+            if from_index is not None:
+                jacobian[from_index, from_index] += dq_dh
+
+                if to_index is not None:
+                    jacobian[from_index, to_index] -= dq_dh
+
+            if to_index is not None:
+                if from_index is not None:
+                    jacobian[to_index, from_index] -= dq_dh
+
+                jacobian[to_index, to_index] += dq_dh
+
+        return jacobian
+
+    def jacobian(
+        self,
+        unknown_heads: list[float] | tuple[float, ...],
+        alpha: float = 1.0,
+        derivative_mode: str = "default",
+    ) -> np.ndarray:
+        """Alias for dense_jacobian()."""
+        return self.dense_jacobian(
+            unknown_heads=unknown_heads,
+            alpha=alpha,
+            derivative_mode=derivative_mode,
+        )
+
+    def finite_difference_jacobian(
+        self,
+        unknown_heads: list[float] | tuple[float, ...],
+        alpha: float = 1.0,
+        relative_step: float = 1.0e-6,
+        absolute_step: float = 1.0e-8,
+    ) -> np.ndarray:
+        """
+        Assemble the dense residual Jacobian using central finite differences.
+        """
+        x = np.asarray(unknown_heads, dtype=float)
+        n_unknowns = len(x)
+        jacobian = np.zeros((n_unknowns, n_unknowns), dtype=float)
+
+        if n_unknowns == 0:
+            return jacobian
+
+        for column_index in range(n_unknowns):
+            step = max(
+                absolute_step,
+                relative_step * max(abs(x[column_index]), 1.0),
+            )
+
+            x_plus = x.copy()
+            x_minus = x.copy()
+
+            x_plus[column_index] += step
+            x_minus[column_index] -= step
+
+            residual_plus = np.asarray(
+                self.nodal_flow_residuals(x_plus.tolist(), alpha),
+                dtype=float,
+            )
+            residual_minus = np.asarray(
+                self.nodal_flow_residuals(x_minus.tolist(), alpha),
+                dtype=float,
+            )
+
+            jacobian[:, column_index] = (
+                residual_plus - residual_minus
+            ) / (2.0 * step)
+
+        return jacobian
 
     # ------------------------------------------------------------------
     # Result evaluation

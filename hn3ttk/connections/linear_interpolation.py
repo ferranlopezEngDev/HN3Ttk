@@ -122,6 +122,9 @@ class LinearInterpolationConnection(Connection):
                 "flow_rates",
                 "head_losses",
                 "extrapolate",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "description": (
                 "Tabulated hydraulic connection using linear interpolation "

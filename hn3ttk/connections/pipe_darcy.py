@@ -223,6 +223,9 @@ class PipeDarcy(Connection):
                 "gravity",
                 "laminar_reynolds",
                 "turbulent_reynolds",
+                "jacobian_derivative",
+                "jacobian_derivative_step",
+                "jacobian_derivative_absolute_step",
             ],
             "description": (
                 "Pipe connection using the complete Darcy-Weisbach equation "
