@@ -53,9 +53,6 @@ pip install -r requirements-dev.txt
 To verify the repository before publishing changes, run the test scripts in
 `tests/` and the step-by-step examples in `examples/`.
 
-The repository is also prepared with a GitHub Actions CI workflow that compiles
-key modules and runs tests and examples on supported Python versions.
-
 ## Quickstart
 
 For a beginner-friendly first example, see:
