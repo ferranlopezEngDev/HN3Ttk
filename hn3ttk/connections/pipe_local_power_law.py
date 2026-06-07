@@ -18,6 +18,26 @@ class PipeLocalPowerLaw(Connection):
 
     Sign convention:
         q > 0 gives delta_h < 0 because passive pipes dissipate energy.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    Required:
+    - ``length`` [m]
+    - ``diameter`` [m]
+    - ``roughness`` [m]
+
+    Optional:
+    - ``kinematic_viscosity``
+    - ``gravity``
+    - ``laminar_reynolds``
+    - ``turbulent_reynolds``
+    - ``relative_band``
+    - ``minimum_flow_rate``
+    - ``head_tolerance``
+    - ``inverse_relative_tolerance``
+    - ``inverse_max_iterations``
+    - ``derivative_relative_step``
+    - ``derivative_absolute_step``
     """
 
     type: ClassVar[str] = "pipe_local_power_law"
@@ -93,9 +113,7 @@ class PipeLocalPowerLaw(Connection):
         return 1.0 / slope
 
     def validate(self) -> None:
-        """
-        Validate common and pipe-specific parameters.
-        """
+        """Validate required keys, defaults and physical parameter ranges."""
         super().validate()
 
         required_parameters = [
@@ -205,9 +223,7 @@ class PipeLocalPowerLaw(Connection):
             )
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the local power-law model."""
         return {
             "type": self.type,
             "equation": "ΔH = -k(Q) * sign(Q) * |Q|^n(Q)",
@@ -254,9 +270,7 @@ class PipeLocalPowerLaw(Connection):
 
             exponent_b = log(f1 / f2) / log(q2 / q1)
 
-        which gives:
-
-            n = 2 - exponent_b
+        which gives ``n = 2 - exponent_b`` in this implementation.
         """
         q_abs = abs(float(q))
 

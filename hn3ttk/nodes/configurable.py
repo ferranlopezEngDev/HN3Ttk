@@ -9,43 +9,47 @@ class ConfigurableNode(Node):
     """
     Fully configurable hydraulic node.
 
-    Parameters
-    ----------
-    elevation:
-        Geometric elevation z [m].
+    This is the most generic node model in the package. It can behave either
+    as a fixed-head boundary or as an unknown-head node depending on
+    ``parameters["fixed_head"]``.
 
-    fixed_head:
-        If True, the node hydraulic head is prescribed.
-        If False, the node hydraulic head is an unknown.
-
-    head:
-        Prescribed hydraulic head H [m] when fixed_head is True.
-
-    initial_head:
-        Initial guess for hydraulic head H [m] when fixed_head is False.
-
-    external_flow:
-        Signed external nodal flow [m³/s].
-        Positive means injection.
-        Negative means demand/extraction.
-
-    scale_head_with_alpha:
-        If True:
-            fixed_head(alpha) = elevation + alpha * (head - elevation)
-
-    scale_external_flow_with_alpha:
-        If True:
-            external_flow(alpha) = alpha * external_flow
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``elevation``:
+      geometric elevation ``z`` in meters. Default: ``0.0``.
+    - ``fixed_head``:
+      ``True`` for a prescribed-head node, ``False`` for an unknown-head node.
+      Default: ``False``.
+    - ``head``:
+      prescribed hydraulic head ``H`` in meters for fixed-head mode.
+      Default: ``elevation``.
+    - ``initial_head``:
+      initial head guess in meters for unknown-head mode.
+      Default: ``elevation``.
+    - ``external_flow``:
+      signed external nodal flow in m3/s. Positive means injection and
+      negative means demand. Default: ``0.0``.
+    - ``scale_head_with_alpha``:
+      when ``True``, ``fixed_head(alpha) = elevation + alpha * (head - elevation)``.
+    - ``scale_external_flow_with_alpha``:
+      when ``True``, ``external_flow(alpha) = alpha * external_flow``.
     """
 
     type: ClassVar[str] = "configurable_node"
 
     def is_fixed_head(self) -> bool:
-        """Return True if the node has a prescribed hydraulic head."""
+        """Return ``True`` when ``parameters['fixed_head']`` is enabled."""
         return bool(self.parameters["fixed_head"])
 
     def fixed_head(self, alpha: float = 1.0) -> float:
-        """Return prescribed hydraulic head H."""
+        """
+        Return the prescribed hydraulic head in fixed-head mode.
+
+        Raises
+        ------
+        ValueError
+            If the node is currently configured as unknown-head.
+        """
         if not self.is_fixed_head():
             raise ValueError("Node does not have a fixed hydraulic head.")
 
@@ -59,14 +63,24 @@ class ConfigurableNode(Node):
         return head
 
     def initial_head(self) -> float:
-        """Return initial hydraulic-head guess H."""
+        """
+        Return the initial hydraulic-head guess.
+
+        For fixed-head mode, this returns the imposed head so fixed-head nodes
+        can still participate in utilities that expect a head value.
+        """
         if self.is_fixed_head():
             return self.fixed_head(alpha=1.0)
 
         return self._initial_head()
 
     def external_flow(self, alpha: float = 1.0) -> float:
-        """Return signed external nodal flow."""
+        """
+        Return the signed external nodal flow.
+
+        Positive values inject water into the network. Negative values extract
+        water from the network.
+        """
         alpha = self._validate_continuation_factor(alpha)
 
         value = self._external_flow()
@@ -77,7 +91,11 @@ class ConfigurableNode(Node):
         return value
 
     def validate(self) -> None:
-        """Validate configurable node parameters."""
+        """
+        Validate and normalize the configurable node parameter dictionary.
+
+        Missing optional keys are filled with defaults.
+        """
         super().validate()
 
         self.parameters.setdefault("elevation", 0.0)
@@ -102,7 +120,7 @@ class ConfigurableNode(Node):
         self._validate_bool("scale_external_flow_with_alpha")
 
     def model_info(self) -> dict[str, Any]:
-        """Return descriptive information about this node model."""
+        """Return a machine-readable summary of this node model."""
         return {
             "type": self.type,
             "description": "Fully configurable hydraulic node.",

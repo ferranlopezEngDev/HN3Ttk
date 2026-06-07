@@ -23,7 +23,39 @@ def solve_damped_newton_raphson(
     min_damping_factor: float = 1.0e-6,
     max_backtracking_steps: int = 20,
 ) -> SolverResult:
-    """Solve the hydraulic system with a damped Newton-Raphson method."""
+    """
+    Solve the hydraulic system with a damped Newton-Raphson method.
+
+    Parameters
+    ----------
+    system:
+        Hydraulic system to solve.
+    initial_unknown_heads:
+        Optional initial guess for unknown-head nodes.
+    alpha:
+        Continuation factor used while evaluating the equations.
+    derivative_mode:
+        Jacobian derivative strategy forwarded to connection models.
+    tolerance:
+        Residual convergence tolerance.
+    step_tolerance:
+        Accepted step-size tolerance for early convergence.
+    max_iterations:
+        Maximum Newton iterations.
+    initial_damping_factor:
+        First damping factor tried for each Newton step.
+    damping_reduction_factor:
+        Multiplicative reduction used during backtracking.
+    min_damping_factor:
+        Smallest damping factor accepted before failing the step.
+    max_backtracking_steps:
+        Maximum number of damping trials per Newton iteration.
+
+    Returns
+    -------
+    SolverResult
+        Final solution, residuals, convergence message and iteration history.
+    """
     if not isfinite(float(initial_damping_factor)):
         raise ValueError("Parameter 'initial_damping_factor' must be finite.")
 

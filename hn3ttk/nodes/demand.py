@@ -11,6 +11,17 @@ class DemandNode(Node):
 
     Demand is stored as a positive magnitude and returned as negative external
     flow, because it extracts water from the network.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``elevation``:
+      geometric elevation in meters. Default: ``0.0``.
+    - ``initial_head``:
+      initial head guess in meters. Default: ``elevation``.
+    - ``demand``:
+      positive demand magnitude in m3/s. Required.
+    - ``scale_demand_with_alpha``:
+      when ``True``, the effective external flow becomes ``-alpha * demand``.
     """
 
     type: ClassVar[str] = "demand_node"
@@ -20,16 +31,25 @@ class DemandNode(Node):
         return False
 
     def fixed_head(self, alpha: float = 1.0) -> float:
-        """Demand nodes do not have fixed hydraulic head."""
+        """
+        Raise because demand nodes do not prescribe hydraulic head.
+
+        This method exists to satisfy the common :class:`Node` API.
+        """
         self._validate_continuation_factor(alpha)
         raise ValueError("DemandNode does not have a fixed hydraulic head.")
 
     def initial_head(self) -> float:
-        """Return initial hydraulic-head guess H."""
+        """Return the initial unknown-head guess in meters."""
         return float(self.parameters["initial_head"])
 
     def external_flow(self, alpha: float = 1.0) -> float:
-        """Return demand as negative external flow."""
+        """
+        Return demand as negative external flow.
+
+        The stored demand magnitude is positive, but the returned external flow
+        is negative because demand removes water from the network.
+        """
         alpha = self._validate_continuation_factor(alpha)
 
         demand = float(self.parameters["demand"])
@@ -40,7 +60,11 @@ class DemandNode(Node):
         return -demand
 
     def validate(self) -> None:
-        """Validate demand node parameters."""
+        """
+        Validate demand-node parameters and fill optional defaults.
+
+        The ``demand`` key is required and must be non-negative.
+        """
         super().validate()
 
         self.parameters.setdefault("elevation", 0.0)
@@ -61,7 +85,7 @@ class DemandNode(Node):
         self._validate_bool("scale_demand_with_alpha")
 
     def model_info(self) -> dict[str, Any]:
-        """Return descriptive information about this node model."""
+        """Return a machine-readable summary of the demand node model."""
         return {
             "type": self.type,
             "description": "Unknown-head node with prescribed demand.",

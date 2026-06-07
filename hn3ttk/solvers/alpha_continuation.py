@@ -17,7 +17,13 @@ def solve_alpha_continuation_newton(
     step_tolerance: float = 1.0e-10,
     max_iterations_per_step: int = 50,
 ) -> SolverResult:
-    """Solve a sequence of hydraulic problems using alpha continuation."""
+    """
+    Solve a sequence of hydraulic problems using alpha continuation.
+
+    The system is solved repeatedly for increasing ``alpha`` values from
+    ``alpha_start`` to ``alpha_end`` using the plain Newton solver at each
+    continuation step.
+    """
     return run_alpha_continuation(
         system=system,
         step_solver=solve_newton_raphson,

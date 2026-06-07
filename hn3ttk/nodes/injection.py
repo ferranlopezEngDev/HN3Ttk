@@ -11,6 +11,17 @@ class InjectionNode(Node):
 
     Injection is stored as a positive magnitude and returned as positive
     external flow, because it adds water into the network.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``elevation``:
+      geometric elevation in meters. Default: ``0.0``.
+    - ``initial_head``:
+      initial head guess in meters. Default: ``elevation``.
+    - ``injection``:
+      positive injection magnitude in m3/s. Required.
+    - ``scale_injection_with_alpha``:
+      when ``True``, the effective external flow becomes ``alpha * injection``.
     """
 
     type: ClassVar[str] = "injection_node"
@@ -20,16 +31,22 @@ class InjectionNode(Node):
         return False
 
     def fixed_head(self, alpha: float = 1.0) -> float:
-        """Injection nodes do not have fixed hydraulic head."""
+        """
+        Raise because injection nodes do not prescribe hydraulic head.
+        """
         self._validate_continuation_factor(alpha)
         raise ValueError("InjectionNode does not have a fixed hydraulic head.")
 
     def initial_head(self) -> float:
-        """Return initial hydraulic-head guess H."""
+        """Return the initial unknown-head guess in meters."""
         return float(self.parameters["initial_head"])
 
     def external_flow(self, alpha: float = 1.0) -> float:
-        """Return injection as positive external flow."""
+        """
+        Return injection as positive external flow.
+
+        Positive external flow means water is added into the network.
+        """
         alpha = self._validate_continuation_factor(alpha)
 
         injection = float(self.parameters["injection"])
@@ -40,7 +57,11 @@ class InjectionNode(Node):
         return injection
 
     def validate(self) -> None:
-        """Validate injection node parameters."""
+        """
+        Validate injection-node parameters and fill optional defaults.
+
+        The ``injection`` key is required and must be non-negative.
+        """
         super().validate()
 
         self.parameters.setdefault("elevation", 0.0)
@@ -61,7 +82,7 @@ class InjectionNode(Node):
         self._validate_bool("scale_injection_with_alpha")
 
     def model_info(self) -> dict[str, Any]:
-        """Return descriptive information about this node model."""
+        """Return a machine-readable summary of the injection node model."""
         return {
             "type": self.type,
             "description": "Unknown-head node with prescribed injection.",

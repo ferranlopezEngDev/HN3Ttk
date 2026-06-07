@@ -43,7 +43,38 @@ def solve_scipy_least_squares(
     max_function_evaluations: int | None = None,
     kwargs: dict[str, Any] | None = None,
 ) -> SolverResult:
-    """Solve the hydraulic system using scipy.optimize.least_squares."""
+    """
+    Solve the hydraulic system using ``scipy.optimize.least_squares``.
+
+    Parameters
+    ----------
+    system:
+        Hydraulic system to solve.
+    initial_unknown_heads:
+        Optional initial guess for unknown-head nodes.
+    alpha:
+        Continuation factor used while evaluating the equations.
+    method:
+        SciPy least-squares method, usually ``"trf"``, ``"dogbox"`` or ``"lm"``.
+    use_jacobian:
+        If ``True``, use the analytical dense Jacobian when possible.
+    derivative_mode:
+        Jacobian derivative strategy forwarded to connection models.
+    tolerance:
+        Main SciPy tolerance used for ``ftol``, ``xtol`` and ``gtol``.
+    residual_tolerance:
+        Extra acceptance criterion applied by HN3Ttk after SciPy returns.
+    bounds:
+        Lower and upper bounds for the unknown-head vector.
+    loss:
+        Robust loss name forwarded to SciPy.
+    f_scale:
+        Scaling parameter for the selected loss.
+    max_function_evaluations:
+        Optional evaluation budget forwarded to SciPy.
+    kwargs:
+        Optional extra keyword arguments passed to SciPy.
+    """
     if method not in SCIPY_LEAST_SQUARES_METHODS:
         raise ValueError(
             f"Invalid SciPy least_squares method '{method}'. "

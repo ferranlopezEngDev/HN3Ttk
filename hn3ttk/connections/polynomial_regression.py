@@ -25,6 +25,23 @@ class PolynomialRegressionConnection(Connection):
 
     This class does not enforce passive behaviour. It only fits the provided
     data.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``flow_rates``:
+      sampled flow-rate values. Required.
+    - ``head_losses``:
+      sampled head-variation values. Required.
+    - ``degree``:
+      polynomial degree. Default: ``1``.
+    - ``extrapolate``:
+      whether values outside the sampled range are allowed. Default: ``True``.
+    - ``inverse_scan_points``:
+      scan density used to bracket inverse solutions.
+    - ``inverse_max_iterations``:
+      maximum inverse iterations.
+    - ``head_tolerance`` and ``flow_tolerance``:
+      small tolerances used by the inverse solve.
     """
 
     type: ClassVar[str] = "polynomial_regression"
@@ -85,9 +102,7 @@ class PolynomialRegressionConnection(Connection):
         return 1.0 / slope
 
     def validate(self) -> None:
-        """
-        Validate common and regression-specific parameters.
-        """
+        """Validate tabulation data, regression degree and inverse settings."""
         super().validate()
 
         required_parameters = [
@@ -169,9 +184,7 @@ class PolynomialRegressionConnection(Connection):
             raise ValueError("Parameter 'flow_tolerance' must be positive.")
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the regression model."""
         return {
             "type": self.type,
             "equation": "Polynomial regression of Q -> ΔH",
@@ -212,9 +225,7 @@ class PolynomialRegressionConnection(Connection):
         flow_rates: list[float],
         head_losses: list[float],
     ) -> None:
-        """
-        Replace the whole tabulation and rebuild the polynomial model.
-        """
+        """Replace the whole tabulation and rebuild the polynomial model."""
         self.parameters["flow_rates"] = list(flow_rates)
         self.parameters["head_losses"] = list(head_losses)
 

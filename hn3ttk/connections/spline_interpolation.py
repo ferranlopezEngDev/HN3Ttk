@@ -31,6 +31,17 @@ class SplineInterpolationConnection(Connection):
 
     This class does not enforce passive behaviour. It only requires the curve
     to be invertible, so head_losses must be strictly monotonic.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``flow_rates``:
+      sampled flow-rate values. Required.
+    - ``head_losses``:
+      sampled head-variation values. Required.
+    - ``method``:
+      interpolation family, either ``"pchip"`` or ``"cubic_spline"``.
+    - ``extrapolate``:
+      whether values outside the sampled range are allowed. Default: ``True``.
     """
 
     type: ClassVar[str] = "spline_interpolation"
@@ -80,9 +91,7 @@ class SplineInterpolationConnection(Connection):
         return float(self._inverse_derivative(delta_h))
 
     def validate(self) -> None:
-        """
-        Validate common and spline-specific parameters.
-        """
+        """Validate tabulation data, interpolation method and constraints."""
         super().validate()
 
         required_parameters = [
@@ -132,9 +141,7 @@ class SplineInterpolationConnection(Connection):
         self.parameters["head_losses"] = head_losses
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the spline model."""
         return {
             "type": self.type,
             "equation": "Spline interpolation of Q -> ΔH",
@@ -175,9 +182,7 @@ class SplineInterpolationConnection(Connection):
         flow_rates: list[float],
         head_losses: list[float],
     ) -> None:
-        """
-        Replace the whole tabulation and rebuild the spline model.
-        """
+        """Replace the whole tabulation and rebuild the spline model."""
         self.parameters["flow_rates"] = list(flow_rates)
         self.parameters["head_losses"] = list(head_losses)
 
@@ -185,9 +190,7 @@ class SplineInterpolationConnection(Connection):
         self._rebuild_model()
 
     def add_point(self, flow_rate: float, head_loss: float) -> None:
-        """
-        Add one tabulated point and rebuild the spline model.
-        """
+        """Add one tabulated sample and rebuild the spline model."""
         flow_rates, head_losses = self.get_tabulation()
 
         flow_rates.append(float(flow_rate))
@@ -196,9 +199,7 @@ class SplineInterpolationConnection(Connection):
         self.set_tabulation(flow_rates, head_losses)
 
     def remove_point(self, index: int) -> None:
-        """
-        Remove one tabulated point by index and rebuild the spline model.
-        """
+        """Remove one tabulated sample by index and rebuild the spline model."""
         flow_rates, head_losses = self.get_tabulation()
 
         if not isinstance(index, int):
@@ -216,9 +217,7 @@ class SplineInterpolationConnection(Connection):
         self.set_tabulation(flow_rates, head_losses)
 
     def get_method(self) -> str:
-        """
-        Return the current interpolation method.
-        """
+        """Return the current interpolation method name."""
         return str(self.parameters["method"])
 
     def set_method(self, method: str) -> None:

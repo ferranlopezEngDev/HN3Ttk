@@ -30,6 +30,19 @@ class HydraulicSystem:
 
     Head convention:
         delta_h = H_to - H_from
+
+    Constructor arguments
+    ---------------------
+    id:
+        Optional system identifier.
+    nodes:
+        Dictionary mapping node ids to node objects.
+    connections:
+        Dictionary mapping connection ids to connection objects.
+    links:
+        Dictionary mapping link ids to link objects.
+    metadata:
+        Free-form user metadata stored together with the system.
     """
 
     id: str = "hydraulic_system"
@@ -46,7 +59,13 @@ class HydraulicSystem:
     # ------------------------------------------------------------------
 
     def validate(self) -> None:
-        """Validate system containers."""
+        """
+        Validate system containers and cross-references.
+
+        This checks container types, id consistency between dictionary keys and
+        stored objects, and that each link references existing nodes and
+        connections.
+        """
         if not isinstance(self.id, str):
             raise TypeError("System id must be a string.")
 
@@ -114,7 +133,16 @@ class HydraulicSystem:
     # ------------------------------------------------------------------
 
     def add_node(self, node: Node) -> None:
-        """Add a node to the system."""
+        """
+        Add a node to the system.
+
+        Raises
+        ------
+        TypeError
+            If ``node`` is not a :class:`Node`.
+        ValueError
+            If another node with the same id already exists.
+        """
         if not isinstance(node, Node):
             raise TypeError("Expected a Node object.")
 
@@ -124,7 +152,7 @@ class HydraulicSystem:
         self.nodes[node.id] = node
 
     def add_connection(self, connection: Connection) -> None:
-        """Add a connection to the system."""
+        """Add a connection to the system and enforce unique ids."""
         if not isinstance(connection, Connection):
             raise TypeError("Expected a Connection object.")
 
@@ -134,7 +162,11 @@ class HydraulicSystem:
         self.connections[connection.id] = connection
 
     def add_link(self, link: Link) -> None:
-        """Add a topological link to the system."""
+        """
+        Add a topological link to the system.
+
+        The referenced nodes and connection must already exist in the system.
+        """
         if not isinstance(link, Link):
             raise TypeError("Expected a Link object.")
 
@@ -155,6 +187,24 @@ class HydraulicSystem:
     ) -> Link:
         """
         Create and add a link between a connection and two nodes.
+
+        Parameters
+        ----------
+        connection_id:
+            Existing connection id to place in the network.
+        from_node_id:
+            Start node for the positive flow orientation.
+        to_node_id:
+            End node for the positive flow orientation.
+        link_id:
+            Optional explicit id for the created link.
+        metadata:
+            Optional metadata dictionary copied into the link.
+
+        Returns
+        -------
+        Link
+            The newly created and inserted link object.
         """
         link_kwargs: dict[str, Any] = {
             "connection_id": connection_id,
@@ -176,15 +226,15 @@ class HydraulicSystem:
     # ------------------------------------------------------------------
 
     def get_node(self, node_id: str) -> Node:
-        """Return node by id."""
+        """Return the node with the requested id."""
         return self.nodes[node_id]
 
     def get_connection(self, connection_id: str) -> Connection:
-        """Return connection by id."""
+        """Return the connection with the requested id."""
         return self.connections[connection_id]
 
     def get_link(self, link_id: str) -> Link:
-        """Return link by id."""
+        """Return the link with the requested id."""
         return self.links[link_id]
 
     # ------------------------------------------------------------------
@@ -192,7 +242,7 @@ class HydraulicSystem:
     # ------------------------------------------------------------------
 
     def fixed_head_node_ids(self) -> list[str]:
-        """Return ids of fixed-head nodes."""
+        """Return the ids of all fixed-head nodes in insertion order."""
         return [
             node_id
             for node_id, node in self.nodes.items()
@@ -200,7 +250,7 @@ class HydraulicSystem:
         ]
 
     def unknown_head_node_ids(self) -> list[str]:
-        """Return ids of unknown-head nodes."""
+        """Return the ids of all unknown-head nodes in insertion order."""
         return [
             node_id
             for node_id, node in self.nodes.items()
@@ -208,14 +258,18 @@ class HydraulicSystem:
         ]
 
     def initial_unknown_heads(self) -> list[float]:
-        """Return initial guesses for unknown-head nodes."""
+        """Return the initial head guesses for all unknown-head nodes."""
         return [
             self.nodes[node_id].initial_head()
             for node_id in self.unknown_head_node_ids()
         ]
 
     def unknown_head_index(self) -> dict[str, int]:
-        """Return unknown-head node ids mapped to Jacobian indices."""
+        """
+        Return unknown-head node ids mapped to solver/Jacobian indices.
+
+        The ordering matches :meth:`unknown_head_node_ids`.
+        """
         return {
             node_id: index
             for index, node_id in enumerate(self.unknown_head_node_ids())

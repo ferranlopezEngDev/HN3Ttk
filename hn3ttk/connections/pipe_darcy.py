@@ -23,14 +23,30 @@ class PipeDarcy(Connection):
 
     Sign convention:
         q > 0 gives delta_h < 0 because passive pipes dissipate energy.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    Required:
+    - ``length`` [m]
+    - ``diameter`` [m]
+    - ``roughness`` [m]
+
+    Optional:
+    - ``kinematic_viscosity`` [m2/s], default ``1.0e-6``
+    - ``gravity`` [m/s2], default ``9.81``
+    - ``laminar_reynolds``, default ``2000.0``
+    - ``turbulent_reynolds``, default ``4000.0``
+    - ``head_tolerance``
+    - ``inverse_relative_tolerance``
+    - ``inverse_max_iterations``
+    - ``derivative_relative_step``
+    - ``derivative_absolute_step``
     """
 
     type: ClassVar[str] = "pipe_darcy"
 
     def head_loss(self, q: float) -> float:
-        """
-        Return signed Darcy-Weisbach head variation for signed flow rate q.
-        """
+        """Return signed Darcy-Weisbach head variation for signed flow rate ``q``."""
         q = float(q)
 
         if q == 0.0:
@@ -53,6 +69,11 @@ class PipeDarcy(Connection):
 
         For passive pipes:
             delta_h < 0 gives q > 0.
+
+        Returns
+        -------
+        float
+            Signed flow rate in m3/s.
         """
         delta_h = float(delta_h)
 
@@ -87,9 +108,7 @@ class PipeDarcy(Connection):
         return (h_plus - h_minus) / (q_plus - q_minus)
 
     def flow_rate_derivative(self, delta_h: float) -> float:
-        """
-        Return dQ/d(ΔH) evaluated at delta_h.
-        """
+        """Return ``dQ/d(ΔH)`` evaluated at the requested head variation."""
         delta_h = float(delta_h)
 
         if abs(delta_h) <= self._head_tolerance():
@@ -104,9 +123,7 @@ class PipeDarcy(Connection):
         return 1.0 / slope
 
     def validate(self) -> None:
-        """
-        Validate common and pipe-specific parameters.
-        """
+        """Validate required keys, defaults and physical parameter ranges."""
         super().validate()
 
         required_parameters = [
@@ -204,9 +221,7 @@ class PipeDarcy(Connection):
             )
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the Darcy-Weisbach model."""
         return {
             "type": self.type,
             "equation": "ΔH = -f * 8 * L * Q * |Q| / (g * π² * D⁵)",
@@ -234,15 +249,11 @@ class PipeDarcy(Connection):
         }
 
     def reynolds_number(self, q: float) -> float:
-        """
-        Return Reynolds number for signed flow rate q.
-        """
+        """Return Reynolds number for the requested signed flow rate."""
         return self.reynolds_number_from_flow_magnitude(abs(float(q)))
 
     def reynolds_number_from_flow_magnitude(self, q_abs: float) -> float:
-        """
-        Return Reynolds number for a positive flow-rate magnitude.
-        """
+        """Return Reynolds number for a positive flow-rate magnitude."""
         q_abs = float(q_abs)
 
         if q_abs < 0.0:

@@ -22,6 +22,15 @@ class PipeFixedPowerLaw(Connection):
     Sign convention:
         q > 0 gives delta_h < 0 because passive pipes dissipate energy.
         q < 0 gives delta_h > 0.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``k``:
+      positive power-law coefficient. Required.
+    - ``n``:
+      positive power-law exponent. Required.
+    - ``head_tolerance``:
+      small threshold used when inverting near zero head loss.
     """
 
     type: ClassVar[str] = "pipe_fixed_power_law"
@@ -37,6 +46,11 @@ class PipeFixedPowerLaw(Connection):
         Convention:
             q > 0 -> ΔH < 0
             q < 0 -> ΔH > 0
+
+        Returns
+        -------
+        float
+            Signed head variation in meters.
         """
         q = float(q)
 
@@ -52,6 +66,11 @@ class PipeFixedPowerLaw(Connection):
         Convention:
             delta_h < 0 -> q > 0
             delta_h > 0 -> q < 0
+
+        Returns
+        -------
+        float
+            Signed flow rate in m3/s.
         """
         delta_h = float(delta_h)
 
@@ -63,9 +82,7 @@ class PipeFixedPowerLaw(Connection):
         return -copysign(q_abs, delta_h)
 
     def head_loss_derivative(self, q: float) -> float:
-        """
-        Return d(ΔH)/dQ evaluated at q.
-        """
+        """Return ``d(ΔH)/dQ`` evaluated at the requested flow rate."""
         q = float(q)
         k = self._k()
         n = self._n()
@@ -82,9 +99,7 @@ class PipeFixedPowerLaw(Connection):
         return -k * n * abs(q) ** (n - 1.0)
 
     def flow_rate_derivative(self, delta_h: float) -> float:
-        """
-        Return dQ/d(ΔH) evaluated at delta_h.
-        """
+        """Return ``dQ/d(ΔH)`` evaluated at the requested head variation."""
         delta_h = float(delta_h)
         k = self._k()
         n = self._n()
@@ -105,9 +120,7 @@ class PipeFixedPowerLaw(Connection):
         )
 
     def validate(self) -> None:
-        """
-        Validate common and model-specific parameters.
-        """
+        """Validate required keys, defaults and positivity constraints."""
         super().validate()
 
         required_parameters = [
@@ -147,9 +160,7 @@ class PipeFixedPowerLaw(Connection):
             raise ValueError("Parameter 'head_tolerance' must be positive.")
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the fixed power-law model."""
         return {
             "type": self.type,
             "equation": "ΔH = -k * sign(Q) * |Q|^n",

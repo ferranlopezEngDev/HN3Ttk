@@ -23,6 +23,16 @@ class LinearInterpolationConnection(Connection):
 
     However, this class only requires the tabulated relation to be invertible.
     It does not enforce passive behaviour.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``flow_rates``:
+      list of sampled flow-rate values. Required.
+    - ``head_losses``:
+      list of sampled head-variation values with the same length as
+      ``flow_rates``. Required.
+    - ``extrapolate``:
+      whether values outside the sampled range are allowed. Default: ``True``.
     """
 
     type: ClassVar[str] = "linear_interpolation"
@@ -76,9 +86,7 @@ class LinearInterpolationConnection(Connection):
         )
 
     def validate(self) -> None:
-        """
-        Validate common and tabulation-specific parameters.
-        """
+        """Validate tabulation lengths, numeric content and extrapolation flag."""
         super().validate()
 
         required_parameters = [
@@ -112,9 +120,7 @@ class LinearInterpolationConnection(Connection):
         self.parameters["head_losses"] = head_losses
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the interpolation model."""
         return {
             "type": self.type,
             "equation": "Piecewise-linear interpolation of Q -> ΔH",
@@ -153,9 +159,7 @@ class LinearInterpolationConnection(Connection):
         flow_rates: list[float],
         head_losses: list[float],
     ) -> None:
-        """
-        Replace the whole tabulation and rebuild the interpolation model.
-        """
+        """Replace the whole tabulation and rebuild the interpolation model."""
         self.parameters["flow_rates"] = list(flow_rates)
         self.parameters["head_losses"] = list(head_losses)
 
@@ -163,9 +167,7 @@ class LinearInterpolationConnection(Connection):
         self._rebuild_model()
 
     def add_point(self, flow_rate: float, head_loss: float) -> None:
-        """
-        Add one tabulated point and rebuild the interpolation model.
-        """
+        """Add one tabulated sample and rebuild the interpolation model."""
         flow_rates, head_losses = self.get_tabulation()
 
         flow_rates.append(float(flow_rate))
@@ -174,9 +176,7 @@ class LinearInterpolationConnection(Connection):
         self.set_tabulation(flow_rates, head_losses)
 
     def remove_point(self, index: int) -> None:
-        """
-        Remove one tabulated point by index and rebuild the interpolation model.
-        """
+        """Remove one tabulated sample by index and rebuild the model."""
         flow_rates, head_losses = self.get_tabulation()
 
         if not isinstance(index, int):
@@ -194,9 +194,7 @@ class LinearInterpolationConnection(Connection):
         self.set_tabulation(flow_rates, head_losses)
 
     def sample(self, n: int) -> dict[str, list[float]]:
-        """
-        Sample the interpolated curve using n equally spaced flow-rate values.
-        """
+        """Sample the interpolated curve at ``n`` equally spaced flow-rate values."""
         if not isinstance(n, int):
             raise TypeError("Sample count 'n' must be an integer.")
 

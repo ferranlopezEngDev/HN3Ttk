@@ -12,6 +12,19 @@ class Link:
 
     A Link defines how a local hydraulic connection is placed inside a network.
 
+    Constructor arguments
+    ---------------------
+    connection_id:
+        Id of the connection model placed in the network.
+    from_node_id:
+        Id of the upstream reference node for the positive flow direction.
+    to_node_id:
+        Id of the downstream reference node for the positive flow direction.
+    id:
+        Optional link identifier. If omitted, a unique id is generated.
+    metadata:
+        Free-form user metadata.
+
     Sign convention:
         q > 0 means flow from from_node_id to to_node_id
 
@@ -29,7 +42,12 @@ class Link:
         self.validate()
 
     def validate(self) -> None:
-        """Validate link data."""
+        """
+        Validate link fields and basic topology consistency.
+
+        This method checks string ids, ensures the link is not self-connected
+        and validates the metadata container type.
+        """
         if not isinstance(self.id, str):
             raise TypeError("Link id must be a string.")
 
@@ -63,6 +81,9 @@ class Link:
     def reversed(self) -> "Link":
         """
         Return a new link with reversed orientation.
+
+        The new link keeps the same connection id and metadata copy, but swaps
+        ``from_node_id`` and ``to_node_id``.
         """
         return Link(
             id=f"{self.id}_reversed",
@@ -84,7 +105,15 @@ class Link:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Link":
-        """Build a link object from a dictionary."""
+        """
+        Build a link object from a serialized dictionary.
+
+        Parameters
+        ----------
+        data:
+            Dictionary containing ``connection_id``, ``from_node_id`` and
+            ``to_node_id``, plus optional ``id`` and ``metadata``.
+        """
         if not isinstance(data, dict):
             raise TypeError("Link data must be a dictionary.")
 

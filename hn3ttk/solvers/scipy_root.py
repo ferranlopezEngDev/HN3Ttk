@@ -36,7 +36,39 @@ def solve_scipy_root(
     max_function_evaluations: int | None = None,
     options: dict[str, Any] | None = None,
 ) -> SolverResult:
-    """Solve the hydraulic system using scipy.optimize.root."""
+    """
+    Solve the hydraulic system using ``scipy.optimize.root``.
+
+    Parameters
+    ----------
+    system:
+        Hydraulic system to solve.
+    initial_unknown_heads:
+        Optional initial guess for unknown-head nodes. If omitted, the system
+        initial guesses are used.
+    alpha:
+        Continuation factor applied while evaluating the system equations.
+    method:
+        SciPy root method, for example ``"hybr"``, ``"lm"`` or ``"krylov"``.
+    use_jacobian:
+        If ``True``, use the analytical dense Jacobian when the selected SciPy
+        method supports it.
+    derivative_mode:
+        Jacobian derivative strategy forwarded to connection models.
+    tolerance:
+        Main SciPy solver tolerance.
+    residual_tolerance:
+        Extra acceptance criterion applied by HN3Ttk after SciPy returns.
+    max_function_evaluations:
+        Optional iteration/evaluation budget forwarded to SciPy.
+    options:
+        Optional raw SciPy options dictionary.
+
+    Returns
+    -------
+    SolverResult
+        Final solution, residuals, convergence message and metadata.
+    """
     if method not in SCIPY_ROOT_METHODS:
         raise ValueError(
             f"Invalid SciPy root method '{method}'. "
@@ -219,7 +251,13 @@ def solve_alpha_continuation_scipy_root(
     max_function_evaluations: int | None = None,
     options: dict[str, Any] | None = None,
 ) -> SolverResult:
-    """Solve a sequence of hydraulic problems using SciPy root continuation."""
+    """
+    Solve a sequence of hydraulic problems using SciPy root continuation.
+
+    The problem is solved repeatedly for increasing ``alpha`` values from
+    ``alpha_start`` to ``alpha_end``. The solution of one step is reused as the
+    initial guess for the next step.
+    """
     if not isinstance(alpha_steps, int):
         raise TypeError("Parameter 'alpha_steps' must be an integer.")
 

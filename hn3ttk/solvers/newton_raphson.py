@@ -18,7 +18,37 @@ def solve_newton_raphson(
     step_tolerance: float = 1.0e-10,
     max_iterations: int = 50,
 ) -> SolverResult:
-    """Solve the hydraulic system with a simple Newton-Raphson method."""
+    """
+    Solve the hydraulic system with a simple Newton-Raphson method.
+
+    Parameters
+    ----------
+    system:
+        Hydraulic system to solve.
+    initial_unknown_heads:
+        Optional initial guess for unknown-head nodes. If omitted, the system
+        initial guesses are used.
+    alpha:
+        Continuation factor used while evaluating the equations.
+    derivative_mode:
+        Jacobian derivative strategy forwarded to connection models.
+    tolerance:
+        Residual convergence tolerance.
+    step_tolerance:
+        Step-size convergence tolerance.
+    max_iterations:
+        Maximum number of Newton iterations.
+
+    Returns
+    -------
+    SolverResult
+        Final solution, residuals, convergence message and iteration history.
+
+    Notes
+    -----
+    This is a plain Newton method: no damping, no line search and no step
+    clipping.
+    """
     if initial_unknown_heads is None:
         initial_unknown_heads = system.initial_unknown_heads()
 

@@ -13,7 +13,28 @@ class Connection(ABC):
     Base class for hydraulic connection models.
 
     A Connection represents only the local physical behaviour of an
-    hydraulic element. It does not know which nodes it connects.
+    hydraulic element. It does not know which nodes it connects; topology is
+    defined later by the system layer.
+
+    Constructor arguments
+    ---------------------
+    id:
+        Optional connection identifier. If omitted, a unique id is generated.
+    parameters:
+        Model-specific configuration dictionary. Each concrete connection class
+        documents its accepted keys in its own class docstring.
+    metadata:
+        Free-form user metadata stored and exported together with the model.
+
+    Common optional ``parameters`` keys
+    -----------------------------------
+    - ``jacobian_derivative``:
+      default Jacobian strategy. Allowed values are ``"normal"``,
+      ``"tendency"``, ``"inverse_head_loss"`` and ``"finite_difference"``.
+    - ``jacobian_derivative_step``:
+      relative finite-difference step for the fallback strategy.
+    - ``jacobian_derivative_absolute_step``:
+      absolute finite-difference step for the fallback strategy.
     """
 
     id: str = field(default_factory=lambda: f"conn_{uuid4().hex}")
@@ -34,22 +55,36 @@ class Connection(ABC):
 
     @abstractmethod
     def head_loss(self, q: float) -> float:
-        """Return head loss for a given flow rate."""
+        """
+        Return head variation for a given signed flow rate.
+
+        Parameters
+        ----------
+        q:
+            Signed flow rate in m3/s.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def flow_rate(self, delta_h: float) -> float:
-        """Return flow rate for a given head difference."""
+        """
+        Return signed flow rate for a given head variation.
+
+        Parameters
+        ----------
+        delta_h:
+            Signed head variation in meters.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def head_loss_derivative(self, q: float) -> float:
-        """Return d(delta_h)/dQ."""
+        """Return the derivative ``d(delta_h)/dQ`` at the requested flow rate."""
         raise NotImplementedError
 
     @abstractmethod
     def flow_rate_derivative(self, delta_h: float) -> float:
-        """Return dQ/d(delta_h)."""
+        """Return the derivative ``dQ/d(delta_h)`` at the requested head."""
         raise NotImplementedError
 
     def head_loss_tendency(self, q: float) -> float:
@@ -57,6 +92,10 @@ class Connection(ABC):
         Return the symmetric secant tendency of the head-loss curve.
 
         tendency = [head_loss(q) - head_loss(-q)] / (2q)
+
+        This is useful as an alternative Jacobian approximation when the normal
+        derivative is too singular or numerically unstable near the operating
+        point.
         """
         if q == 0:
             return self.head_loss_derivative(0.0)
@@ -78,7 +117,7 @@ class Connection(ABC):
 
     @staticmethod
     def _validate_jacobian_derivative_mode(mode: str) -> str:
-        """Validate and normalize a jacobian derivative mode."""
+        """Validate and normalize a Jacobian derivative mode string."""
         if not isinstance(mode, str):
             raise ValueError(
                 "Jacobian derivative mode must be a string. "
@@ -98,7 +137,12 @@ class Connection(ABC):
         return mode
 
     def _resolve_jacobian_derivative_mode(self, method: str) -> str:
-        """Resolve a requested derivative method to a concrete strategy."""
+        """
+        Resolve a requested derivative method to a concrete strategy.
+
+        The special value ``"default"`` means: use the strategy stored in the
+        connection parameter dictionary.
+        """
         method = self._validate_jacobian_derivative_mode(method)
 
         if method != "default":
@@ -114,19 +158,34 @@ class Connection(ABC):
         return configured_mode
 
     def get_jacobian_derivative_mode(self) -> str:
-        """Return the configured default jacobian derivative mode."""
+        """
+        Return the configured default Jacobian derivative mode.
+
+        Returns
+        -------
+        str
+            One of ``"normal"``, ``"tendency"``, ``"inverse_head_loss"`` or
+            ``"finite_difference"``.
+        """
         return self._validate_jacobian_derivative_mode(
             self.parameters.get("jacobian_derivative", "normal")
         )
 
     def set_jacobian_derivative_mode(self, mode: str) -> None:
-        """Set the configured default jacobian derivative mode."""
+        """
+        Store the default Jacobian derivative mode in ``parameters``.
+
+        Parameters
+        ----------
+        mode:
+            One of the supported derivative strategies.
+        """
         self.parameters["jacobian_derivative"] = (
             self._validate_jacobian_derivative_mode(mode)
         )
 
     def _finite_difference_flow_rate_derivative(self, delta_h: float) -> float:
-        """Return dQ/d(delta_h) using a central finite difference."""
+        """Return ``dQ/d(delta_h)`` using a central finite-difference stencil."""
         delta_h = float(delta_h)
 
         relative_step = float(self.parameters["jacobian_derivative_step"])
@@ -149,7 +208,17 @@ class Connection(ABC):
         delta_h: float,
         method: str = "default",
     ) -> float:
-        """Return dQ/d(delta_h) using the requested jacobian strategy."""
+        """
+        Return ``dQ/d(delta_h)`` using the requested Jacobian strategy.
+
+        Parameters
+        ----------
+        delta_h:
+            Signed head variation in meters.
+        method:
+            Requested derivative strategy. Use ``"default"`` to reuse the
+            strategy stored in ``parameters["jacobian_derivative"]``.
+        """
         delta_h = float(delta_h)
         resolved_method = self._resolve_jacobian_derivative_mode(method)
 
@@ -176,7 +245,12 @@ class Connection(ABC):
         return self._finite_difference_flow_rate_derivative(delta_h)
 
     def validate(self) -> None:
-        """Validate common connection data."""
+        """
+        Validate common connection fields and shared optional parameters.
+
+        Concrete subclasses usually call this method first and then validate
+        their own model-specific keys.
+        """
         if not isinstance(self.id, str):
             raise TypeError("Connection id must be a string.")
 
@@ -222,7 +296,14 @@ class Connection(ABC):
             self.parameters[name] = value
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the connection to a serializable dictionary."""
+        """
+        Convert the connection to a serializable dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary with ``id``, ``type``, ``parameters`` and ``metadata``.
+        """
         return {
             "id": self.id,
             "type": self.type,
@@ -232,7 +313,15 @@ class Connection(ABC):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Connection":
-        """Build a connection object from a dictionary."""
+        """
+        Build a connection object from a serialized dictionary.
+
+        Parameters
+        ----------
+        data:
+            Dictionary containing ``id`` and optionally ``parameters`` and
+            ``metadata``.
+        """
         return cls(
             id=data["id"],
             parameters=data.get("parameters", {}),
@@ -240,7 +329,12 @@ class Connection(ABC):
         )
 
     def model_info(self) -> dict[str, Any]:
-        """Return basic information about the connection model."""
+        """
+        Return a small descriptive dictionary for the connection model.
+
+        This helper is useful for documentation tools, demos or UI layers that
+        want to inspect the model without hardcoding parameter names.
+        """
         return {
             "type": self.type,
             "description": "Base hydraulic connection model.",

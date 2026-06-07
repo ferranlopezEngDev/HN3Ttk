@@ -26,6 +26,21 @@ class CustomFactorPolynomialConnection(Connection):
     This model is useful for custom empirical laws such as:
 
         ΔH = -(a1*Q + a2*Q|Q| + a3*sign(Q)*|Q|^n)
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``coefficients``:
+      positive polynomial coefficients. Required.
+    - ``exponents``:
+      positive exponents associated with each coefficient. Required.
+    - ``head_tolerance``:
+      near-zero threshold for inversion. Default: ``1.0e-12``.
+    - ``inverse_relative_tolerance``:
+      tolerance for the inverse solve. Default: ``1.0e-10``.
+    - ``inverse_max_iterations``:
+      maximum inverse iterations. Default: ``100``.
+    - ``minimum_flow_rate``:
+      minimum positive flow magnitude used internally near zero.
     """
 
     type: ClassVar[str] = "custom_factor_polynomial"
@@ -105,9 +120,7 @@ class CustomFactorPolynomialConnection(Connection):
         return 1.0 / slope
 
     def validate(self) -> None:
-        """
-        Validate common and model-specific parameters.
-        """
+        """Validate polynomial-term arrays, defaults and positivity rules."""
         super().validate()
 
         required_parameters = [
@@ -177,9 +190,7 @@ class CustomFactorPolynomialConnection(Connection):
             raise ValueError("Parameter 'inverse_max_iterations' must be positive.")
 
     def model_info(self) -> dict[str, Any]:
-        """
-        Return descriptive information about this connection model.
-        """
+        """Return a machine-readable summary of the custom polynomial model."""
         return {
             "type": self.type,
             "equation": "ΔH = -Σ ai * sign(Q) * |Q|^ni",
@@ -223,9 +234,7 @@ class CustomFactorPolynomialConnection(Connection):
         coefficients: list[float],
         exponents: list[float],
     ) -> None:
-        """
-        Replace all polynomial terms and rebuild the model.
-        """
+        """Replace all polynomial terms and rebuild the model."""
         self.parameters["coefficients"] = list(coefficients)
         self.parameters["exponents"] = list(exponents)
 
@@ -233,9 +242,7 @@ class CustomFactorPolynomialConnection(Connection):
         self._rebuild_model()
 
     def add_term(self, coefficient: float, exponent: float) -> None:
-        """
-        Add one polynomial factor and rebuild the model.
-        """
+        """Add one polynomial factor and rebuild the model."""
         coefficients, exponents = self.get_terms()
 
         coefficients.append(float(coefficient))

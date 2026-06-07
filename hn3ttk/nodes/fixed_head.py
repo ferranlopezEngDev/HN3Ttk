@@ -11,17 +11,34 @@ class FixedHeadNode(ConfigurableNode):
 
     This node prescribes hydraulic head H. It does not impose an external flow.
     The exchanged flow is determined by the network solution.
+
+    Expected ``parameters`` keys
+    ----------------------------
+    - ``elevation``:
+      geometric elevation in meters. Default: ``0.0``.
+    - ``head``:
+      prescribed hydraulic head in meters. Required.
+    - ``scale_head_with_alpha``:
+      when ``True``, the imposed head is scaled from elevation to final head
+      during continuation solves.
     """
 
     type: ClassVar[str] = "fixed_head_node"
 
     def external_flow(self, alpha: float = 1.0) -> float:
-        """Fixed-head boundaries do not impose an external nodal flow."""
+        """
+        Return zero because fixed-head boundaries do not impose external flow.
+        """
         self._validate_continuation_factor(alpha)
         return 0.0
 
     def validate(self) -> None:
-        """Validate fixed-head node parameters."""
+        """
+        Validate fixed-head-node configuration.
+
+        This method forces ``fixed_head=True`` and forbids a non-zero
+        ``external_flow`` entry.
+        """
         if "fixed_head" in self.parameters and self.parameters["fixed_head"] is not True:
             raise ValueError("FixedHeadNode must have fixed_head=True.")
 
@@ -38,7 +55,7 @@ class FixedHeadNode(ConfigurableNode):
         super().validate()
 
     def model_info(self) -> dict[str, Any]:
-        """Return descriptive information about this node model."""
+        """Return a machine-readable summary of the fixed-head model."""
         return {
             "type": self.type,
             "description": "Prescribed hydraulic-head boundary node.",

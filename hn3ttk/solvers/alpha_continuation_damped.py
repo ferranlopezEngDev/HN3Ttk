@@ -21,7 +21,13 @@ def solve_alpha_continuation_damped_newton(
     min_damping_factor: float = 1.0e-6,
     max_backtracking_steps: int = 20,
 ) -> SolverResult:
-    """Solve a sequence of hydraulic problems using damped Newton continuation."""
+    """
+    Solve a sequence of hydraulic problems using damped Newton continuation.
+
+    The system is solved repeatedly for increasing ``alpha`` values from
+    ``alpha_start`` to ``alpha_end`` using the damped Newton solver at each
+    continuation step.
+    """
     return run_alpha_continuation(
         system=system,
         step_solver=solve_damped_newton_raphson,

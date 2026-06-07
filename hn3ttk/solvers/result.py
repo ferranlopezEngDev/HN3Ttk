@@ -6,6 +6,31 @@ from typing import Any
 
 @dataclass
 class SolverResult:
+    """
+    Container with the outcome of a hydraulic solve.
+
+    Attributes
+    ----------
+    success:
+        Whether the solve met the convergence criteria.
+    message:
+        Human-readable convergence or failure message.
+    iterations:
+        Number of iterations or function evaluations reported by the solver.
+    unknown_heads:
+        Final unknown-head values in the solver ordering.
+    residuals:
+        Final nodal residual vector.
+    max_abs_residual:
+        Maximum absolute value of the final residual vector.
+    state:
+        Optional evaluated hydraulic state dictionary.
+    history:
+        Optional iteration history collected by the solver.
+    metadata:
+        Extra solver-specific metadata.
+    """
+
     success: bool
     message: str
     iterations: int
@@ -17,7 +42,12 @@ class SolverResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a serializable dictionary representation."""
+        """
+        Return a serializable dictionary representation.
+
+        The method converts NumPy scalars, arrays and nested containers to
+        plain Python values where possible.
+        """
 
         def to_builtin(value: Any) -> Any:
             if value is None:
