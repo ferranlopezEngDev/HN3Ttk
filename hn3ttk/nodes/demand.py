@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.nodes.base import Node
-from hn3ttk.type_defs import DemandNodeParameters
 
 
-@dataclass
 class DemandNode(Node):
     """
     Unknown-head node with prescribed demand.
@@ -17,9 +14,6 @@ class DemandNode(Node):
     """
 
     type: ClassVar[str] = "demand_node"
-    parameters: DemandNodeParameters = field(
-        default_factory=lambda: cast(DemandNodeParameters, {})
-    )
 
     def is_fixed_head(self) -> bool:
         """Demand nodes have unknown hydraulic head."""

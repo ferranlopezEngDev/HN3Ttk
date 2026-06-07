@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.nodes.configurable import ConfigurableNode
-from hn3ttk.type_defs import FixedHeadNodeParameters
 
 
-@dataclass
 class FixedHeadNode(ConfigurableNode):
     """
     Fixed hydraulic-head boundary node.
@@ -17,9 +14,6 @@ class FixedHeadNode(ConfigurableNode):
     """
 
     type: ClassVar[str] = "fixed_head_node"
-    parameters: FixedHeadNodeParameters = field(
-        default_factory=lambda: cast(FixedHeadNodeParameters, {})
-    )
 
     def external_flow(self, alpha: float = 1.0) -> float:
         """Fixed-head boundaries do not impose an external nodal flow."""

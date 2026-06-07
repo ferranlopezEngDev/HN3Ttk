@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from math import isfinite
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from scipy.interpolate import CubicSpline, PchipInterpolator
 
 from hn3ttk.connections.base import Connection
-from hn3ttk.type_defs import (
-    SplineInterpolationConnectionParameters,
-    SplineInterpolationMethod,
-)
 
 
-@dataclass
 class SplineInterpolationConnection(Connection):
     """
     Spline-based tabulated hydraulic connection.
@@ -40,12 +34,6 @@ class SplineInterpolationConnection(Connection):
     """
 
     type: ClassVar[str] = "spline_interpolation"
-    parameters: SplineInterpolationConnectionParameters = field(
-        default_factory=lambda: cast(
-            SplineInterpolationConnectionParameters,
-            {},
-        )
-    )
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -227,13 +215,13 @@ class SplineInterpolationConnection(Connection):
 
         self.set_tabulation(flow_rates, head_losses)
 
-    def get_method(self) -> SplineInterpolationMethod:
+    def get_method(self) -> str:
         """
         Return the current interpolation method.
         """
-        return cast(SplineInterpolationMethod, str(self.parameters["method"]))
+        return str(self.parameters["method"])
 
-    def set_method(self, method: SplineInterpolationMethod) -> None:
+    def set_method(self, method: str) -> None:
         """
         Change interpolation method and rebuild the spline model.
         """

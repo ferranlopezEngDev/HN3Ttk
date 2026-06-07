@@ -19,7 +19,7 @@ Nodes define local boundary information:
 - external nodal flow
 - continuation scaling
 - metadata
-```
+````
 
 Nodes do not know:
 

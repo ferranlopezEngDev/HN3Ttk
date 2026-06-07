@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from math import copysign, isfinite, log, log10, pi
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.connections.base import Connection
-from hn3ttk.type_defs import PipeLocalPowerLawParameters
 
 
-@dataclass
 class PipeLocalPowerLaw(Connection):
     """
     Local power-law pipe model derived from Darcy-Weisbach.
@@ -24,9 +21,6 @@ class PipeLocalPowerLaw(Connection):
     """
 
     type: ClassVar[str] = "pipe_local_power_law"
-    parameters: PipeLocalPowerLawParameters = field(
-        default_factory=lambda: cast(PipeLocalPowerLawParameters, {})
-    )
 
     def head_loss(self, q: float) -> float:
         """

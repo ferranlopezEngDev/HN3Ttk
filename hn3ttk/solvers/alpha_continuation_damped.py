@@ -4,7 +4,6 @@ from hn3ttk.solvers._alpha_continuation_common import run_alpha_continuation
 from hn3ttk.solvers.damped_newton_raphson import solve_damped_newton_raphson
 from hn3ttk.solvers.result import SolverResult
 from hn3ttk.system import HydraulicSystem
-from hn3ttk.type_defs import JacobianDerivativeMode
 
 
 def solve_alpha_continuation_damped_newton(
@@ -13,7 +12,7 @@ def solve_alpha_continuation_damped_newton(
     alpha_start: float = 0.0,
     alpha_end: float = 1.0,
     alpha_steps: int = 10,
-    derivative_mode: JacobianDerivativeMode = "default",
+    derivative_mode: str = "default",
     tolerance: float = 1.0e-9,
     step_tolerance: float = 1.0e-10,
     max_iterations_per_step: int = 50,

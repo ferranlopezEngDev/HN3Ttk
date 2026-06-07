@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from math import copysign, isfinite
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.connections.base import Connection
-from hn3ttk.type_defs import PipeFixedPowerLawParameters
 
 
-@dataclass
 class PipeFixedPowerLaw(Connection):
     """
     Fixed power-law pipe model.
@@ -28,9 +25,6 @@ class PipeFixedPowerLaw(Connection):
     """
 
     type: ClassVar[str] = "pipe_fixed_power_law"
-    parameters: PipeFixedPowerLawParameters = field(
-        default_factory=lambda: cast(PipeFixedPowerLawParameters, {})
-    )
 
     # ------------------------------------------------------------------
     # Mandatory public Connection API

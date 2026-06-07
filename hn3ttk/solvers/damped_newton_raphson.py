@@ -8,14 +8,13 @@ import numpy as np
 from hn3ttk.solvers._common import build_solver_result
 from hn3ttk.solvers.result import SolverResult
 from hn3ttk.system import HydraulicSystem
-from hn3ttk.type_defs import JacobianDerivativeMode
 
 
 def solve_damped_newton_raphson(
     system: HydraulicSystem,
     initial_unknown_heads: list[float] | tuple[float, ...] | None = None,
     alpha: float = 1.0,
-    derivative_mode: JacobianDerivativeMode = "default",
+    derivative_mode: str = "default",
     tolerance: float = 1.0e-9,
     step_tolerance: float = 1.0e-10,
     max_iterations: int = 50,

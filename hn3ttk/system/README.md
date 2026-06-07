@@ -8,7 +8,7 @@ It combines:
 nodes
 connections
 links
-```
+````
 
 The `system` module is responsible for topology, orientation, head evaluation,
 flow evaluation and nodal mass-balance residual assembly.

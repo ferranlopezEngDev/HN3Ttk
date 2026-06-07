@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from bisect import bisect_left
-from dataclasses import dataclass, field
 from math import isfinite
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.connections.base import Connection
-from hn3ttk.type_defs import LinearInterpolationConnectionParameters
 
 
-@dataclass
 class LinearInterpolationConnection(Connection):
     """
     Linear tabulated hydraulic connection.
@@ -29,12 +26,6 @@ class LinearInterpolationConnection(Connection):
     """
 
     type: ClassVar[str] = "linear_interpolation"
-    parameters: LinearInterpolationConnectionParameters = field(
-        default_factory=lambda: cast(
-            LinearInterpolationConnectionParameters,
-            {},
-        )
-    )
 
     def __post_init__(self) -> None:
         super().__post_init__()

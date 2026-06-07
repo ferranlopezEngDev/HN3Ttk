@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.nodes.base import Node
-from hn3ttk.type_defs import InjectionNodeParameters
 
 
-@dataclass
 class InjectionNode(Node):
     """
     Unknown-head node with prescribed injection.
@@ -17,9 +14,6 @@ class InjectionNode(Node):
     """
 
     type: ClassVar[str] = "injection_node"
-    parameters: InjectionNodeParameters = field(
-        default_factory=lambda: cast(InjectionNodeParameters, {})
-    )
 
     def is_fixed_head(self) -> bool:
         """Injection nodes have unknown hydraulic head."""

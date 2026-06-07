@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 from hn3ttk.nodes.base import Node
-from hn3ttk.type_defs import ConfigurableNodeParameters
 
 
-@dataclass
 class ConfigurableNode(Node):
     """
     Fully configurable hydraulic node.
@@ -42,9 +39,6 @@ class ConfigurableNode(Node):
     """
 
     type: ClassVar[str] = "configurable_node"
-    parameters: ConfigurableNodeParameters = field(
-        default_factory=lambda: cast(ConfigurableNodeParameters, {})
-    )
 
     def is_fixed_head(self) -> bool:
         """Return True if the node has a prescribed hydraulic head."""

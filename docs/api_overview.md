@@ -2,10 +2,6 @@
 
 This page summarizes the main public modules of HN3Ttk.
 
-For model parameter dictionaries and editor-friendly `TypedDict` helpers, see:
-
-- [Parameter Reference](parameter_reference.md)
-
 ## `hn3ttk.nodes`
 
 Main classes:
@@ -17,15 +13,6 @@ Main classes:
 - `InjectionNode`
 - `ConfigurableNode`
 
-Typed parameter helpers:
-
-- `ReservoirNodeParameters`
-- `DemandNodeParameters`
-- `JunctionNodeParameters`
-- `FixedHeadNodeParameters`
-- `InjectionNodeParameters`
-- `ConfigurableNodeParameters`
-
 ## `hn3ttk.connections`
 
 Main classes:
@@ -34,16 +21,6 @@ Main classes:
 - `PipeFixedPowerLaw`
 - `PipeDarcy`
 - interpolation and regression-based connection models
-
-Typed parameter helpers:
-
-- `PipeFixedPowerLawParameters`
-- `PipeDarcyParameters`
-- `PipeLocalPowerLawParameters`
-- `LinearInterpolationConnectionParameters`
-- `PolynomialRegressionConnectionParameters`
-- `SplineInterpolationConnectionParameters`
-- `CustomFactorPolynomialConnectionParameters`
 
 ## `hn3ttk.system`
 
@@ -72,12 +49,6 @@ Available solvers:
 - alpha continuation variants
 - SciPy root wrappers
 - SciPy least-squares wrappers
-
-Literal option helpers:
-
-- `JacobianDerivativeMode`
-- `ScipyRootMethod`
-- `ScipyLeastSquaresMethod`
 
 ## `hn3ttk.results`
 

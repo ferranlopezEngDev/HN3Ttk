@@ -40,32 +40,6 @@ from hn3ttk.results import (
 )
 ```
 
-If you want VS Code to suggest the valid keys inside `parameters={...}`, you
-can also use the exported `TypedDict` helpers:
-
-```python
-from hn3ttk.connections import PipeFixedPowerLaw, PipeFixedPowerLawParameters
-from hn3ttk.nodes import DemandNode, DemandNodeParameters
-
-demand_parameters: DemandNodeParameters = {
-    "elevation": 0.0,
-    "initial_head": 5.0,
-    "demand": 0.1,
-}
-
-pipe_parameters: PipeFixedPowerLawParameters = {
-    "k": 100.0,
-    "n": 2.0,
-}
-
-demand = DemandNode(parameters=demand_parameters)
-pipe = PipeFixedPowerLaw(parameters=pipe_parameters)
-```
-
-For the full list of supported keys by model, see:
-
-- `docs/parameter_reference.md`
-
 Complete example:
 
 ```python

@@ -9,9 +9,8 @@ from scipy.optimize import root
 from hn3ttk.solvers._common import build_solver_result
 from hn3ttk.solvers.result import SolverResult
 from hn3ttk.system import HydraulicSystem
-from hn3ttk.type_defs import JacobianDerivativeMode, ScipyRootMethod
 
-SCIPY_ROOT_METHODS: tuple[ScipyRootMethod, ...] = (
+SCIPY_ROOT_METHODS = (
     "hybr",
     "lm",
     "broyden1",
@@ -29,9 +28,9 @@ def solve_scipy_root(
     system: HydraulicSystem,
     initial_unknown_heads: list[float] | tuple[float, ...] | None = None,
     alpha: float = 1.0,
-    method: ScipyRootMethod = "hybr",
+    method: str = "hybr",
     use_jacobian: bool = True,
-    derivative_mode: JacobianDerivativeMode = "default",
+    derivative_mode: str = "default",
     tolerance: float = 1.0e-9,
     residual_tolerance: float = 1.0e-8,
     max_function_evaluations: int | None = None,
@@ -212,9 +211,9 @@ def solve_alpha_continuation_scipy_root(
     alpha_start: float = 0.0,
     alpha_end: float = 1.0,
     alpha_steps: int = 10,
-    method: ScipyRootMethod = "hybr",
+    method: str = "hybr",
     use_jacobian: bool = True,
-    derivative_mode: JacobianDerivativeMode = "default",
+    derivative_mode: str = "default",
     tolerance: float = 1.0e-9,
     residual_tolerance: float = 1.0e-8,
     max_function_evaluations: int | None = None,

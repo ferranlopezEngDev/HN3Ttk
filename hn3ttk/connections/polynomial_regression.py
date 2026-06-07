@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from math import isfinite
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar
 
 import numpy as np
 
 from hn3ttk.connections.base import Connection
-from hn3ttk.type_defs import PolynomialRegressionConnectionParameters
 
 
-@dataclass
 class PolynomialRegressionConnection(Connection):
     """
     Polynomial regression hydraulic connection.
@@ -31,12 +28,6 @@ class PolynomialRegressionConnection(Connection):
     """
 
     type: ClassVar[str] = "polynomial_regression"
-    parameters: PolynomialRegressionConnectionParameters = field(
-        default_factory=lambda: cast(
-            PolynomialRegressionConnectionParameters,
-            {},
-        )
-    )
 
     def __post_init__(self) -> None:
         super().__post_init__()
