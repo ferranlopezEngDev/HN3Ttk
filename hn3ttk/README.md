@@ -63,6 +63,10 @@ print(nodes_table(result))
 print(links_table(result))
 ```
 
+For editor-friendly parameter hints, see:
+
+- `docs/parameter_reference.md`
+
 ## Suggested Reading Order
 
 1. Repository root `README.md`

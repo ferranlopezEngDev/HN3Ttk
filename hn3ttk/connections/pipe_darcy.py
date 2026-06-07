@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from math import isfinite, log10, pi
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from hn3ttk.connections.base import Connection
+from hn3ttk.type_defs import PipeDarcyParameters
 
 
+@dataclass
 class PipeDarcy(Connection):
     """
     Complete Darcy-Weisbach pipe model.
@@ -26,6 +29,9 @@ class PipeDarcy(Connection):
     """
 
     type: ClassVar[str] = "pipe_darcy"
+    parameters: PipeDarcyParameters = field(
+        default_factory=lambda: cast(PipeDarcyParameters, {})
+    )
 
     def head_loss(self, q: float) -> float:
         """

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from dataclasses import dataclass, field
+from typing import Any, ClassVar, cast
 
 from hn3ttk.nodes.configurable import ConfigurableNode
+from hn3ttk.type_defs import JunctionNodeParameters
 
 
+@dataclass
 class JunctionNode(ConfigurableNode):
     """
     Junction node with unknown hydraulic head.
@@ -13,6 +16,9 @@ class JunctionNode(ConfigurableNode):
     """
 
     type: ClassVar[str] = "junction_node"
+    parameters: JunctionNodeParameters = field(
+        default_factory=lambda: cast(JunctionNodeParameters, {})
+    )
 
     def validate(self) -> None:
         """Validate junction node parameters."""

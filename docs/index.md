@@ -31,7 +31,8 @@ prototyping and solver comparison.
 5. [Solvers Guide](solvers_guide.md)
 6. [Results and Exports](results_and_exports.md)
 7. [Benchmarks Guide](benchmarks_guide.md)
-8. `examples/06_medium_generic_network.py`
+8. [Parameter Reference](parameter_reference.md)
+9. `examples/06_medium_generic_network.py`
 
 ## Next Pages
 
@@ -43,3 +44,4 @@ prototyping and solver comparison.
 - [Benchmarks Guide](benchmarks_guide.md)
 - [Troubleshooting](troubleshooting.md)
 - [API Overview](api_overview.md)
+- [Parameter Reference](parameter_reference.md)

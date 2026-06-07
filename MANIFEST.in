@@ -7,3 +7,4 @@ recursive-include docs *.md
 recursive-include examples *.py *.md
 recursive-include tests *.py
 recursive-include hn3ttk *.md
+include hn3ttk/py.typed

@@ -18,7 +18,7 @@ All passive connection models follow the same sign convention:
 ```text
 q > 0  ->  delta_h < 0
 q < 0  ->  delta_h > 0
-````
+```
 
 where:
 

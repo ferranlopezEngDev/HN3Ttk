@@ -9,8 +9,12 @@ from scipy.optimize import least_squares
 from hn3ttk.solvers._common import build_solver_result
 from hn3ttk.solvers.result import SolverResult
 from hn3ttk.system import HydraulicSystem
+from hn3ttk.type_defs import (
+    JacobianDerivativeMode,
+    ScipyLeastSquaresMethod,
+)
 
-SCIPY_LEAST_SQUARES_METHODS = (
+SCIPY_LEAST_SQUARES_METHODS: tuple[ScipyLeastSquaresMethod, ...] = (
     "trf",
     "dogbox",
     "lm",
@@ -32,9 +36,9 @@ def solve_scipy_least_squares(
     system: HydraulicSystem,
     initial_unknown_heads: list[float] | tuple[float, ...] | None = None,
     alpha: float = 1.0,
-    method: str = "trf",
+    method: ScipyLeastSquaresMethod = "trf",
     use_jacobian: bool = True,
-    derivative_mode: str = "default",
+    derivative_mode: JacobianDerivativeMode = "default",
     tolerance: float = 1.0e-9,
     residual_tolerance: float = 1.0e-8,
     bounds: tuple[Any, Any] = (-np.inf, np.inf),
@@ -273,9 +277,9 @@ def solve_alpha_continuation_scipy_least_squares(
     alpha_start: float = 0.0,
     alpha_end: float = 1.0,
     alpha_steps: int = 10,
-    method: str = "trf",
+    method: ScipyLeastSquaresMethod = "trf",
     use_jacobian: bool = True,
-    derivative_mode: str = "default",
+    derivative_mode: JacobianDerivativeMode = "default",
     tolerance: float = 1.0e-9,
     residual_tolerance: float = 1.0e-8,
     bounds: tuple[Any, Any] = (-np.inf, np.inf),

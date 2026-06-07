@@ -13,8 +13,16 @@ from hn3ttk.solvers.scipy_root import (
     solve_alpha_continuation_scipy_root,
     solve_scipy_root,
 )
+from hn3ttk.type_defs import (
+    JacobianDerivativeMode,
+    ScipyLeastSquaresMethod,
+    ScipyRootMethod,
+)
 
 __all__ = [
+    "JacobianDerivativeMode",
+    "ScipyRootMethod",
+    "ScipyLeastSquaresMethod",
     "SolverResult",
     "solve_newton_raphson",
     "solve_damped_newton_raphson",

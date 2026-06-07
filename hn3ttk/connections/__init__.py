@@ -14,16 +14,36 @@ from hn3ttk.connections.pipe_fixed_power_law import PipeFixedPowerLaw
 from hn3ttk.connections.pipe_local_power_law import PipeLocalPowerLaw
 from hn3ttk.connections.polynomial_regression import PolynomialRegressionConnection
 from hn3ttk.connections.spline_interpolation import SplineInterpolationConnection
+from hn3ttk.type_defs import (
+    CustomFactorPolynomialConnectionParameters,
+    JacobianDerivativeMode,
+    LinearInterpolationConnectionParameters,
+    PipeDarcyParameters,
+    PipeFixedPowerLawParameters,
+    PipeLocalPowerLawParameters,
+    PolynomialRegressionConnectionParameters,
+    SplineInterpolationConnectionParameters,
+    SplineInterpolationMethod,
+)
 
 __all__ = [
     "Connection",
     "CustomFactorPolynomialConnection",
+    "CustomFactorPolynomialConnectionParameters",
+    "JacobianDerivativeMode",
     "LinearInterpolationConnection",
+    "LinearInterpolationConnectionParameters",
     "PipeDarcy",
+    "PipeDarcyParameters",
     "PipeFixedPowerLaw",
+    "PipeFixedPowerLawParameters",
     "PipeLocalPowerLaw",
+    "PipeLocalPowerLawParameters",
     "PolynomialRegressionConnection",
+    "PolynomialRegressionConnectionParameters",
     "SplineInterpolationConnection",
+    "SplineInterpolationConnectionParameters",
+    "SplineInterpolationMethod",
     "available_connection_types",
     "connection_from_dict",
     "connection_to_dict",

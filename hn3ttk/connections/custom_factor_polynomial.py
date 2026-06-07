@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from math import copysign, isfinite
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from hn3ttk.connections.base import Connection
+from hn3ttk.type_defs import CustomFactorPolynomialConnectionParameters
 
 
+@dataclass
 class CustomFactorPolynomialConnection(Connection):
     """
     Custom factor polynomial hydraulic connection.
@@ -29,6 +32,12 @@ class CustomFactorPolynomialConnection(Connection):
     """
 
     type: ClassVar[str] = "custom_factor_polynomial"
+    parameters: CustomFactorPolynomialConnectionParameters = field(
+        default_factory=lambda: cast(
+            CustomFactorPolynomialConnectionParameters,
+            {},
+        )
+    )
 
     def __post_init__(self) -> None:
         super().__post_init__()

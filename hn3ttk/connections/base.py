@@ -3,8 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from math import copysign, isfinite
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 from uuid import uuid4
+
+from hn3ttk.type_defs import JacobianDerivativeMode
 
 
 @dataclass
@@ -21,7 +23,7 @@ class Connection(ABC):
     metadata: dict[str, Any] = field(default_factory=dict)
 
     type: ClassVar[str] = "connection"
-    jacobian_derivative_modes: ClassVar[tuple[str, ...]] = (
+    jacobian_derivative_modes: ClassVar[tuple[JacobianDerivativeMode, ...]] = (
         "default",
         "normal",
         "tendency",
@@ -77,7 +79,9 @@ class Connection(ABC):
         )
 
     @staticmethod
-    def _validate_jacobian_derivative_mode(mode: str) -> str:
+    def _validate_jacobian_derivative_mode(
+        mode: str,
+    ) -> JacobianDerivativeMode:
         """Validate and normalize a jacobian derivative mode."""
         if not isinstance(mode, str):
             raise ValueError(
@@ -95,9 +99,12 @@ class Connection(ABC):
                 f"{Connection.jacobian_derivative_modes}."
             )
 
-        return mode
+        return cast(JacobianDerivativeMode, mode)
 
-    def _resolve_jacobian_derivative_mode(self, method: str) -> str:
+    def _resolve_jacobian_derivative_mode(
+        self,
+        method: JacobianDerivativeMode,
+    ) -> JacobianDerivativeMode:
         """Resolve a requested derivative method to a concrete strategy."""
         method = self._validate_jacobian_derivative_mode(method)
 
@@ -113,13 +120,16 @@ class Connection(ABC):
 
         return configured_mode
 
-    def get_jacobian_derivative_mode(self) -> str:
+    def get_jacobian_derivative_mode(self) -> JacobianDerivativeMode:
         """Return the configured default jacobian derivative mode."""
         return self._validate_jacobian_derivative_mode(
             self.parameters.get("jacobian_derivative", "normal")
         )
 
-    def set_jacobian_derivative_mode(self, mode: str) -> None:
+    def set_jacobian_derivative_mode(
+        self,
+        mode: JacobianDerivativeMode,
+    ) -> None:
         """Set the configured default jacobian derivative mode."""
         self.parameters["jacobian_derivative"] = (
             self._validate_jacobian_derivative_mode(mode)
@@ -147,7 +157,7 @@ class Connection(ABC):
     def jacobian_derivative(
         self,
         delta_h: float,
-        method: str = "default",
+        method: JacobianDerivativeMode = "default",
     ) -> float:
         """Return dQ/d(delta_h) using the requested jacobian strategy."""
         delta_h = float(delta_h)

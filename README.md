@@ -58,6 +58,7 @@ To verify the repository before publishing changes, run the test scripts in
 For a beginner-friendly first example, see:
 
 - `docs/quickstart.md`
+- `docs/parameter_reference.md`
 - `examples/01_single_pipe_step_by_step.py`
 
 For quick experiments, notebooks and interactive use, you can also import the
@@ -66,6 +67,37 @@ convenience API:
 ```python
 from hn3ttk.api import *
 ```
+
+## Editor Support
+
+HN3Ttk now exports `TypedDict` helpers for the most common model parameter
+dictionaries, so editors such as VS Code can suggest supported keys inside
+`parameters={...}`.
+
+Example:
+
+```python
+from hn3ttk.connections import PipeFixedPowerLaw, PipeFixedPowerLawParameters
+from hn3ttk.nodes import DemandNode, DemandNodeParameters
+
+demand_parameters: DemandNodeParameters = {
+    "elevation": 0.0,
+    "initial_head": 5.0,
+    "demand": 0.1,
+}
+
+pipe_parameters: PipeFixedPowerLawParameters = {
+    "k": 100.0,
+    "n": 2.0,
+}
+
+demand = DemandNode(parameters=demand_parameters)
+pipe = PipeFixedPowerLaw(parameters=pipe_parameters)
+```
+
+See:
+
+- `docs/parameter_reference.md`
 
 ## Sign Conventions
 
