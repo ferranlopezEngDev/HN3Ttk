@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from math import copysign, isfinite, log, log10, pi
+from math import copysign, isclose, isfinite, log, log10, pi
 from typing import Any, ClassVar
 
 from hn3ttk.connections.base import Connection
@@ -51,8 +51,7 @@ class PipeLocalPowerLaw(Connection):
         if q == 0.0:
             return 0.0
 
-        k, n = self.local_power_law_parameters(q)
-        return -copysign(k * abs(q) ** n, q)
+        return -copysign(self._head_loss_magnitude(abs(q)), q)
 
     def flow_rate(self, delta_h: float) -> float:
         """
@@ -245,8 +244,8 @@ class PipeLocalPowerLaw(Connection):
             ],
             "description": (
                 "Pipe connection using Darcy-Weisbach friction factors and a "
-                "local power-law approximation recalculated at each operating "
-                "point."
+                "local power-law approximation outside transition, with a "
+                "linear interpolation of |ΔH|(Q) in transition."
             ),
         }
 
@@ -254,66 +253,36 @@ class PipeLocalPowerLaw(Connection):
         """
         Return local power-law parameters (k, n) at the requested flow rate.
 
-        The local friction factor is approximated as:
+        Laminar regime:
+            exact laminar power law.
 
-            f(Q) ≈ A * Q^B
+        Transitional regime:
+            k(Q) and n(Q) are derived from the local value and slope of a
+            linear interpolation of the transition head-loss curve.
 
-        Darcy-Weisbach gives:
-
-            |ΔH| = C * f(Q) * Q²
-
-        Therefore, the local power-law exponent becomes:
-
-            n = 2 + B
-
-        In this implementation, the intermediate exponent is computed as:
-
-            exponent_b = log(f1 / f2) / log(q2 / q1)
-
-        which gives ``n = 2 - exponent_b`` in this implementation.
+        Turbulent regime:
+            k and n are obtained from a local power-law fit of the
+            Swamee-Jain friction factor.
         """
         q_abs = abs(float(q))
 
         if q_abs <= self._minimum_flow_rate():
             return self._laminar_power_law_parameters()
 
-        q1 = max(
-            self._minimum_flow_rate(),
-            q_abs * (1.0 - self._relative_band()),
-        )
-        q2 = max(
-            q_abs * (1.0 + self._relative_band()),
-            q1 * (1.0 + self._relative_band()),
-        )
+        reynolds = self.reynolds_number_from_flow_magnitude(q_abs)
 
-        re1 = self.reynolds_number_from_flow_magnitude(q1)
-        re2 = self.reynolds_number_from_flow_magnitude(q2)
+        regime = self._flow_regime_from_reynolds(reynolds)
 
-        f1 = self.friction_factor_from_reynolds(re1)
-        f2 = self.friction_factor_from_reynolds(re2)
-
-        if f1 <= 0.0 or f2 <= 0.0:
+        if regime == "laminar":
             return self._laminar_power_law_parameters()
 
-        exponent_b = log(f1 / f2) / log(q2 / q1)
-        coefficient_a = f1 * q1**exponent_b
+        if regime == "transition":
+            return self._transition_equivalent_power_law_parameters(q_abs)
 
-        k = (
-            8.0
-            * coefficient_a
-            * self._length()
-            / (self._gravity() * pi**2 * self._diameter() ** 5)
-        )
+        if regime == "turbulent":
+            return self._turbulent_local_power_law_parameters(q_abs)
 
-        n = 2.0 - exponent_b
-
-        if k <= 0.0:
-            raise ValueError("Computed local coefficient k must be positive.")
-
-        if n <= 0.0:
-            raise ValueError("Computed local exponent n must be positive.")
-
-        return k, n
+        return self._laminar_power_law_parameters()
 
     def reynolds_number(self, q: float) -> float:
         """
@@ -352,34 +321,26 @@ class PipeLocalPowerLaw(Connection):
             f = 64 / Re
 
         Turbulent:
-            Swamee-Jain explicit approximation
+            effective factor derived from the local power-law head-loss model.
 
         Transitional:
-            linear interpolation between laminar and turbulent limits.
+            effective factor derived from a linear interpolation of the
+            transition head-loss curve.
         """
         reynolds = float(reynolds)
 
         if reynolds <= 0.0:
             return 0.0
 
-        re_laminar = self._laminar_reynolds()
-        re_turbulent = self._turbulent_reynolds()
+        q_abs = self._flow_rate_from_reynolds(reynolds)
+        head_loss_magnitude = self._head_loss_magnitude(q_abs)
 
-        if reynolds < re_laminar:
-            return 64.0 / reynolds
-
-        if reynolds > re_turbulent:
-            return self._swamee_jain_friction_factor(reynolds)
-
-        transition_weight = (reynolds - re_laminar) / (
-            re_turbulent - re_laminar
-        )
-
-        laminar_factor = 64.0 / re_laminar
-        turbulent_factor = self._swamee_jain_friction_factor(re_turbulent)
-
-        return laminar_factor + transition_weight * (
-            turbulent_factor - laminar_factor
+        return (
+            head_loss_magnitude
+            * self._gravity()
+            * pi**2
+            * self._diameter() ** 5
+            / (8.0 * self._length() * q_abs**2)
         )
 
     def _head_loss_magnitude(self, q_abs: float) -> float:
@@ -390,10 +351,20 @@ class PipeLocalPowerLaw(Connection):
 
         if q_abs <= self._minimum_flow_rate():
             k, n = self._laminar_power_law_parameters()
-        else:
-            k, n = self.local_power_law_parameters(q_abs)
+            return k * q_abs**n
 
-        return k * q_abs**n
+        regime = self._flow_regime_from_reynolds(
+            self.reynolds_number_from_flow_magnitude(q_abs)
+        )
+
+        if regime == "laminar":
+            k, n = self._laminar_power_law_parameters()
+            return k * q_abs**n
+
+        if regime == "transition":
+            return self._transition_head_loss_magnitude(q_abs)
+
+        return self._turbulent_head_loss_magnitude(q_abs)
 
     def _solve_positive_flow_rate(self, target_head_loss: float) -> float:
         """
@@ -404,8 +375,21 @@ class PipeLocalPowerLaw(Connection):
         if target_head_loss <= self._head_tolerance():
             return 0.0
 
-        low = 0.0
-        high = self._initial_upper_flow_bound(target_head_loss)
+        laminar_head_loss_limit = self._laminar_head_loss_limit()
+
+        if target_head_loss <= laminar_head_loss_limit:
+            return target_head_loss / self._laminar_power_law_parameters()[0]
+
+        turbulent_head_loss_limit = self._turbulent_head_loss_limit()
+
+        if target_head_loss <= turbulent_head_loss_limit:
+            return self._transition_flow_rate(target_head_loss)
+
+        low = self._turbulent_limit_flow_rate()
+        high = max(
+            self._initial_upper_flow_bound(target_head_loss),
+            low,
+        )
 
         for _ in range(self._inverse_max_iterations()):
             if self._head_loss_magnitude(high) >= target_head_loss:
@@ -472,6 +456,212 @@ class PipeLocalPowerLaw(Connection):
         )
 
         return k, 1.0
+
+    def _transition_equivalent_power_law_parameters(
+        self,
+        q_abs: float,
+    ) -> tuple[float, float]:
+        """
+        Return local equivalent k and n from the transition line value/slope.
+        """
+        q_abs = float(q_abs)
+        head_loss_magnitude = self._transition_head_loss_magnitude(q_abs)
+        slope = self._transition_head_loss_slope()
+        n = q_abs * slope / head_loss_magnitude
+        k = head_loss_magnitude / q_abs**n
+
+        if k <= 0.0:
+            raise ValueError("Computed local coefficient k must be positive.")
+
+        if n <= 0.0:
+            raise ValueError("Computed local exponent n must be positive.")
+
+        return k, n
+
+    def _turbulent_local_power_law_parameters(
+        self,
+        q_abs: float,
+    ) -> tuple[float, float]:
+        """
+        Fit a local power law using only the turbulent Swamee-Jain friction law.
+        """
+        q1, q2 = self._local_power_law_band(q_abs)
+        re1 = self.reynolds_number_from_flow_magnitude(q1)
+        re2 = self.reynolds_number_from_flow_magnitude(q2)
+        f1 = self._swamee_jain_friction_factor(re1)
+        f2 = self._swamee_jain_friction_factor(re2)
+
+        return self._power_law_parameters_from_samples(q1, q2, f1, f2)
+
+    def _turbulent_limit_power_law_parameters(self) -> tuple[float, float]:
+        """
+        Return the local power-law parameters at the turbulent Reynolds limit.
+        """
+        return self._turbulent_local_power_law_parameters(
+            self._flow_rate_from_reynolds(self._turbulent_reynolds())
+        )
+
+    def _turbulent_head_loss_magnitude(self, q_abs: float) -> float:
+        """
+        Return the turbulent head-loss magnitude from the local power-law fit.
+        """
+        k, n = self._turbulent_local_power_law_parameters(q_abs)
+        return k * q_abs**n
+
+    def _transition_head_loss_magnitude(self, q_abs: float) -> float:
+        """
+        Return the transition head-loss magnitude from a linear Q-|ΔH| segment.
+        """
+        return self._linear_interpolate(
+            x=float(q_abs),
+            x0=self._laminar_limit_flow_rate(),
+            y0=self._laminar_head_loss_limit(),
+            x1=self._turbulent_limit_flow_rate(),
+            y1=self._turbulent_head_loss_limit(),
+        )
+
+    def _transition_flow_rate(self, target_head_loss: float) -> float:
+        """
+        Return the transition flow rate from the inverse linear Q-|ΔH| segment.
+        """
+        return self._linear_interpolate(
+            x=float(target_head_loss),
+            x0=self._laminar_head_loss_limit(),
+            y0=self._laminar_limit_flow_rate(),
+            x1=self._turbulent_head_loss_limit(),
+            y1=self._turbulent_limit_flow_rate(),
+        )
+
+    def _transition_head_loss_slope(self) -> float:
+        """
+        Return the constant slope of the transition line in the Q-|ΔH| plane.
+        """
+        return (
+            self._turbulent_head_loss_limit() - self._laminar_head_loss_limit()
+        ) / (
+            self._turbulent_limit_flow_rate() - self._laminar_limit_flow_rate()
+        )
+
+    def _local_power_law_band(self, q_abs: float) -> tuple[float, float]:
+        """
+        Return the local sampling band used to fit the power-law coefficients.
+        """
+        q1 = max(
+            self._minimum_flow_rate(),
+            float(q_abs) * (1.0 - self._relative_band()),
+        )
+        q2 = max(
+            float(q_abs) * (1.0 + self._relative_band()),
+            q1 * (1.0 + self._relative_band()),
+        )
+
+        return q1, q2
+
+    def _power_law_parameters_from_samples(
+        self,
+        q1: float,
+        q2: float,
+        f1: float,
+        f2: float,
+    ) -> tuple[float, float]:
+        """
+        Build k and n from two positive flow-rate samples and their factors.
+        """
+        if f1 <= 0.0 or f2 <= 0.0:
+            return self._laminar_power_law_parameters()
+
+        exponent_b = log(f1 / f2) / log(q2 / q1)
+        coefficient_a = f1 * q1**exponent_b
+
+        k = (
+            8.0
+            * coefficient_a
+            * self._length()
+            / (self._gravity() * pi**2 * self._diameter() ** 5)
+        )
+        n = 2.0 - exponent_b
+
+        if k <= 0.0:
+            raise ValueError("Computed local coefficient k must be positive.")
+
+        if n <= 0.0:
+            raise ValueError("Computed local exponent n must be positive.")
+
+        return k, n
+
+    def _flow_rate_from_reynolds(self, reynolds: float) -> float:
+        """
+        Return the positive flow-rate magnitude corresponding to Reynolds.
+        """
+        return (
+            float(reynolds)
+            * pi
+            * self._diameter()
+            * self._kinematic_viscosity()
+            / 4.0
+        )
+
+    def _laminar_limit_flow_rate(self) -> float:
+        return self._flow_rate_from_reynolds(self._laminar_reynolds())
+
+    def _turbulent_limit_flow_rate(self) -> float:
+        return self._flow_rate_from_reynolds(self._turbulent_reynolds())
+
+    def _laminar_head_loss_limit(self) -> float:
+        return self._laminar_head_loss_magnitude(self._laminar_limit_flow_rate())
+
+    def _turbulent_head_loss_limit(self) -> float:
+        return self._turbulent_head_loss_magnitude(self._turbulent_limit_flow_rate())
+
+    def _flow_regime_from_reynolds(self, reynolds: float) -> str:
+        """
+        Classify the flow regime from Reynolds number using closed boundaries.
+        """
+        reynolds = float(reynolds)
+
+        if reynolds == 0.0:
+            return "stagnant"
+
+        if reynolds <= self._laminar_reynolds() or isclose(
+            reynolds,
+            self._laminar_reynolds(),
+            rel_tol=1.0e-12,
+            abs_tol=0.0,
+        ):
+            return "laminar"
+
+        if reynolds >= self._turbulent_reynolds() or isclose(
+            reynolds,
+            self._turbulent_reynolds(),
+            rel_tol=1.0e-12,
+            abs_tol=0.0,
+        ):
+            return "turbulent"
+
+        return "transition"
+
+    def _laminar_head_loss_magnitude(self, q_abs: float) -> float:
+        """
+        Return the exact laminar head-loss magnitude.
+        """
+        k, n = self._laminar_power_law_parameters()
+        return k * float(q_abs) ** n
+
+    @staticmethod
+    def _linear_interpolate(
+        x: float,
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+    ) -> float:
+        """
+        Return the linear interpolation between two points.
+        """
+        if x1 == x0:
+            raise ValueError("Interpolation points must have distinct x values.")
+
+        return y0 + (float(x) - x0) * (y1 - y0) / (x1 - x0)
 
     def _swamee_jain_friction_factor(self, reynolds: float) -> float:
         """

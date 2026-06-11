@@ -115,6 +115,74 @@ class Connection(ABC):
             2.0 * delta_h
         )
 
+    def head_loss_plot_data(
+        self,
+        q_start: float,
+        q_end: float,
+        n: int,
+    ) -> dict[str, list[float]]:
+        """
+        Return sampled data for plotting ``ΔH(Q)``, its derivative and tendency.
+
+        Parameters
+        ----------
+        q_start:
+            First flow-rate value in the requested sampling interval.
+        q_end:
+            Last flow-rate value in the requested sampling interval.
+        n:
+            Number of evaluation points.
+        """
+        flow_rates = self._build_plot_inputs(
+            start=q_start,
+            end=q_end,
+            n=n,
+            label="Flow rate",
+        )
+
+        return {
+            "flow_rates": flow_rates,
+            "head_losses": [self.head_loss(q) for q in flow_rates],
+            "derivatives": [self.head_loss_derivative(q) for q in flow_rates],
+            "tendencies": [self.head_loss_tendency(q) for q in flow_rates],
+        }
+
+    def flow_rate_plot_data(
+        self,
+        delta_h_start: float,
+        delta_h_end: float,
+        n: int,
+    ) -> dict[str, list[float]]:
+        """
+        Return sampled data for plotting ``Q(ΔH)``, its derivative and tendency.
+
+        Parameters
+        ----------
+        delta_h_start:
+            First head-variation value in the requested sampling interval.
+        delta_h_end:
+            Last head-variation value in the requested sampling interval.
+        n:
+            Number of evaluation points.
+        """
+        head_losses = self._build_plot_inputs(
+            start=delta_h_start,
+            end=delta_h_end,
+            n=n,
+            label="Head variation",
+        )
+
+        return {
+            "head_losses": head_losses,
+            "flow_rates": [self.flow_rate(delta_h) for delta_h in head_losses],
+            "derivatives": [
+                self.flow_rate_derivative(delta_h) for delta_h in head_losses
+            ],
+            "tendencies": [
+                self.flow_rate_tendency(delta_h) for delta_h in head_losses
+            ],
+        }
+
     @staticmethod
     def _validate_jacobian_derivative_mode(mode: str) -> str:
         """Validate and normalize a Jacobian derivative mode string."""
@@ -243,6 +311,36 @@ class Connection(ABC):
             return 1.0 / d_head_d_flow
 
         return self._finite_difference_flow_rate_derivative(delta_h)
+
+    @staticmethod
+    def _build_plot_inputs(
+        *,
+        start: float,
+        end: float,
+        n: int,
+        label: str,
+    ) -> list[float]:
+        """Return ``n`` equally spaced finite values between ``start`` and ``end``."""
+        if not isinstance(n, int):
+            raise TypeError("Sample count 'n' must be an integer.")
+
+        if n < 2:
+            raise ValueError("Sample count 'n' must be at least 2.")
+
+        for value_name, value in (("start", start), ("end", end)):
+            if not isinstance(value, (int, float)):
+                raise TypeError(f"{label} {value_name} must be numeric.")
+
+            numeric_value = float(value)
+
+            if not isfinite(numeric_value):
+                raise ValueError(f"{label} {value_name} must be finite.")
+
+        start = float(start)
+        end = float(end)
+        step = (end - start) / (n - 1)
+
+        return [start + index * step for index in range(n)]
 
     def validate(self) -> None:
         """

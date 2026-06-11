@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from math import isfinite, log10, pi
+from math import copysign, isclose, isfinite, log10, pi
 from typing import Any, ClassVar
 
 from hn3ttk.connections.base import Connection
@@ -52,16 +52,7 @@ class PipeDarcy(Connection):
         if q == 0.0:
             return 0.0
 
-        friction_factor = self.friction_factor(q)
-
-        return (
-            -friction_factor
-            * 8.0
-            * self._length()
-            * q
-            * abs(q)
-            / (self._gravity() * pi**2 * self._diameter() ** 5)
-        )
+        return -copysign(self._head_loss_magnitude(abs(q)), q)
 
     def flow_rate(self, delta_h: float) -> float:
         """
@@ -228,7 +219,7 @@ class PipeDarcy(Connection):
             "reference_model": "Darcy-Weisbach",
             "friction_factor": (
                 "64/Re in laminar regime, Swamee-Jain in turbulent regime, "
-                "linear interpolation in transition"
+                "linear interpolation of |ΔH|(Q) in transition"
             ),
             "parameters": [
                 "length",
@@ -284,49 +275,30 @@ class PipeDarcy(Connection):
             Swamee-Jain explicit approximation
 
         Transitional:
-            linear interpolation between laminar and turbulent limits.
+            effective factor derived from a linear interpolation of the
+            transition head-loss curve.
         """
         reynolds = float(reynolds)
 
         if reynolds <= 0.0:
             return 0.0
 
-        re_laminar = self._laminar_reynolds()
-        re_turbulent = self._turbulent_reynolds()
+        q_abs = self._flow_rate_from_reynolds(reynolds)
+        head_loss_magnitude = self._head_loss_magnitude(q_abs)
 
-        if reynolds < re_laminar:
-            return 64.0 / reynolds
-
-        if reynolds > re_turbulent:
-            return self._swamee_jain_friction_factor(reynolds)
-
-        transition_weight = (reynolds - re_laminar) / (
-            re_turbulent - re_laminar
-        )
-
-        laminar_factor = 64.0 / re_laminar
-        turbulent_factor = self._swamee_jain_friction_factor(re_turbulent)
-
-        return laminar_factor + transition_weight * (
-            turbulent_factor - laminar_factor
+        return (
+            head_loss_magnitude
+            * self._gravity()
+            * pi**2
+            * self._diameter() ** 5
+            / (8.0 * self._length() * q_abs**2)
         )
 
     def flow_regime(self, q: float) -> str:
         """
         Return qualitative flow regime for signed flow rate q.
         """
-        reynolds = self.reynolds_number(q)
-
-        if reynolds == 0.0:
-            return "stagnant"
-
-        if reynolds < self._laminar_reynolds():
-            return "laminar"
-
-        if reynolds > self._turbulent_reynolds():
-            return "turbulent"
-
-        return "transition"
+        return self._flow_regime_from_reynolds(self.reynolds_number(q))
 
     def _head_loss_magnitude(self, q_abs: float) -> float:
         """
@@ -337,17 +309,17 @@ class PipeDarcy(Connection):
         if q_abs == 0.0:
             return 0.0
 
-        friction_factor = self.friction_factor_from_reynolds(
+        regime = self._flow_regime_from_reynolds(
             self.reynolds_number_from_flow_magnitude(q_abs)
         )
 
-        return (
-            friction_factor
-            * 8.0
-            * self._length()
-            * q_abs**2
-            / (self._gravity() * pi**2 * self._diameter() ** 5)
-        )
+        if regime == "laminar":
+            return self._laminar_head_loss_slope() * q_abs
+
+        if regime == "transition":
+            return self._transition_head_loss_magnitude(q_abs)
+
+        return self._turbulent_head_loss_magnitude(q_abs)
 
     def _solve_positive_flow_rate(self, target_head_loss: float) -> float:
         """
@@ -358,8 +330,21 @@ class PipeDarcy(Connection):
         if target_head_loss <= self._head_tolerance():
             return 0.0
 
-        low = 0.0
-        high = self._initial_upper_flow_bound(target_head_loss)
+        laminar_head_loss_limit = self._laminar_head_loss_limit()
+
+        if target_head_loss <= laminar_head_loss_limit:
+            return target_head_loss / self._laminar_head_loss_slope()
+
+        turbulent_head_loss_limit = self._turbulent_head_loss_limit()
+
+        if target_head_loss <= turbulent_head_loss_limit:
+            return self._transition_flow_rate(target_head_loss)
+
+        low = self._turbulent_limit_flow_rate()
+        high = max(
+            self._initial_upper_flow_bound(target_head_loss),
+            low,
+        )
 
         for _ in range(self._inverse_max_iterations()):
             if self._head_loss_magnitude(high) >= target_head_loss:
@@ -429,6 +414,112 @@ class PipeDarcy(Connection):
         return 0.25 / log10(
             relative_roughness / 3.7 + 5.74 / reynolds**0.9
         ) ** 2
+
+    def _turbulent_head_loss_magnitude(self, q_abs: float) -> float:
+        """
+        Return the turbulent head-loss magnitude from Swamee-Jain.
+        """
+        reynolds = self.reynolds_number_from_flow_magnitude(q_abs)
+        friction_factor = self._swamee_jain_friction_factor(reynolds)
+
+        return (
+            friction_factor
+            * 8.0
+            * self._length()
+            * q_abs**2
+            / (self._gravity() * pi**2 * self._diameter() ** 5)
+        )
+
+    def _transition_head_loss_magnitude(self, q_abs: float) -> float:
+        """
+        Return the transition head-loss magnitude from a linear Q-|ΔH| segment.
+        """
+        return self._linear_interpolate(
+            x=float(q_abs),
+            x0=self._laminar_limit_flow_rate(),
+            y0=self._laminar_head_loss_limit(),
+            x1=self._turbulent_limit_flow_rate(),
+            y1=self._turbulent_head_loss_limit(),
+        )
+
+    def _transition_flow_rate(self, target_head_loss: float) -> float:
+        """
+        Return the transition flow rate from the inverse linear Q-|ΔH| segment.
+        """
+        return self._linear_interpolate(
+            x=float(target_head_loss),
+            x0=self._laminar_head_loss_limit(),
+            y0=self._laminar_limit_flow_rate(),
+            x1=self._turbulent_head_loss_limit(),
+            y1=self._turbulent_limit_flow_rate(),
+        )
+
+    def _flow_regime_from_reynolds(self, reynolds: float) -> str:
+        """
+        Classify the flow regime from Reynolds number using closed boundaries.
+        """
+        reynolds = float(reynolds)
+
+        if reynolds == 0.0:
+            return "stagnant"
+
+        if reynolds <= self._laminar_reynolds() or isclose(
+            reynolds,
+            self._laminar_reynolds(),
+            rel_tol=1.0e-12,
+            abs_tol=0.0,
+        ):
+            return "laminar"
+
+        if reynolds >= self._turbulent_reynolds() or isclose(
+            reynolds,
+            self._turbulent_reynolds(),
+            rel_tol=1.0e-12,
+            abs_tol=0.0,
+        ):
+            return "turbulent"
+
+        return "transition"
+
+    def _flow_rate_from_reynolds(self, reynolds: float) -> float:
+        """
+        Return the positive flow-rate magnitude corresponding to Reynolds.
+        """
+        return (
+            float(reynolds)
+            * pi
+            * self._diameter()
+            * self._kinematic_viscosity()
+            / 4.0
+        )
+
+    def _laminar_limit_flow_rate(self) -> float:
+        return self._flow_rate_from_reynolds(self._laminar_reynolds())
+
+    def _turbulent_limit_flow_rate(self) -> float:
+        return self._flow_rate_from_reynolds(self._turbulent_reynolds())
+
+    def _laminar_head_loss_limit(self) -> float:
+        return self._laminar_head_loss_slope() * self._laminar_limit_flow_rate()
+
+    def _turbulent_head_loss_limit(self) -> float:
+        return self._turbulent_head_loss_magnitude(self._turbulent_limit_flow_rate())
+
+    @staticmethod
+    def _linear_interpolate(
+        x: float,
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+    ) -> float:
+        """
+        Return the linear interpolation between two points.
+        """
+        if x1 == x0:
+            raise ValueError("Interpolation points must have distinct x values.")
+
+        return y0 + (float(x) - x0) * (y1 - y0) / (x1 - x0)
 
     def _derivative_step(self, q: float) -> float:
         """

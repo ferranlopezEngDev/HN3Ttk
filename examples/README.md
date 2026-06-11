@@ -19,3 +19,5 @@ python examples/01_single_pipe_step_by_step.py
 ```
 
 All examples are self-contained and do not require external data files.
+
+Plot-oriented exploratory scripts live in [examples/plots](/home/chapo518/DEVcode/TFG/HN3Ttk/examples/plots/README.md).

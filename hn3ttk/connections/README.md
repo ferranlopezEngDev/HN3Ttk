@@ -159,6 +159,8 @@ PipeFixedPowerLaw
 LinearInterpolationConnection
 PolynomialRegressionConnection
 SplineInterpolationConnection
+SplineSecantExtrapolationConnection
+SplineTangentExtrapolationConnection
 CustomFactorPolynomialConnection
 ```
 
@@ -189,7 +191,7 @@ The friction factor is computed from the Reynolds number:
 ```text
 Laminar regime:      f = 64 / Re
 Turbulent regime:    Swamee-Jain approximation
-Transition regime:   linear interpolation
+Transition regime:   linear interpolation of |ΔH|(Q)
 ```
 
 Example:
@@ -234,6 +236,10 @@ The model approximates the Darcy-Weisbach curve locally as:
 
 The coefficients `k(Q)` and `n(Q)` are recalculated around the current operating
 point.
+
+In the transition regime, the model interpolates the head-loss curve directly
+with a linear segment and derives equivalent local `k(Q)` and `n(Q)` from the
+local line value and slope.
 
 This model is useful for comparing a full Darcy-Weisbach formulation with a
 local potential approximation.
@@ -423,6 +429,91 @@ print(connection.get_method())
 
 ---
 
+## SplineTangentExtrapolationConnection
+
+Tabulated connection using spline interpolation inside the tabulated domain and
+tangent-line extrapolation outside it.
+
+Supported methods:
+
+```text
+pchip
+cubic_spline
+```
+
+Outside the tabulated range:
+
+```text
+forward curve  Q -> ΔH: tangent line at the nearest endpoint
+inverse curve  ΔH -> Q: tangent line at the nearest endpoint
+```
+
+This is useful when plain spline extrapolation is too aggressive or
+non-physical and a locally linear continuation is preferred.
+
+Example:
+
+```python
+from hn3ttk.connections import SplineTangentExtrapolationConnection
+
+connection = SplineTangentExtrapolationConnection(
+    parameters={
+        "flow_rates": [-0.02, -0.01, 0.0, 0.01, 0.02],
+        "head_losses": [3.0, 1.0, 0.0, -1.0, -3.0],
+        "method": "pchip",
+    }
+)
+
+print(connection.head_loss(0.01))
+print(connection.head_loss(0.03))
+print(connection.flow_rate(-1.0))
+```
+
+---
+
+## SplineSecantExtrapolationConnection
+
+Tabulated connection using spline interpolation inside the tabulated domain and
+the straight line defined by the first two or last two tabulated points outside
+it.
+
+Supported methods:
+
+```text
+pchip
+cubic_spline
+```
+
+Outside the tabulated range:
+
+```text
+left side:   line through (x1, y1) and (x2, y2)
+right side:  line through (xn-1, yn-1) and (xn, yn)
+```
+
+This corresponds to a linear fit built from the two boundary samples of each
+side.
+
+Example:
+
+```python
+from hn3ttk.connections import SplineSecantExtrapolationConnection
+
+connection = SplineSecantExtrapolationConnection(
+    parameters={
+        "flow_rates": [-0.02, -0.01, 0.0, 0.01, 0.02],
+        "head_losses": [3.0, 1.0, 0.0, -1.0, -3.0],
+        "method": "pchip",
+    }
+)
+
+print(connection.head_loss(0.01))
+print(connection.head_loss(0.03))
+print(connection.flow_rate(-1.0))
+```
+
+---
+
 ## CustomFactorPolynomialConnection
 
 Custom passive polynomial factor model.
@@ -478,6 +569,16 @@ add_point(flow_rate, head_loss)
 remove_point(index)
 sample(n)
 ```
+
+For generic plotting support, every connection also exposes:
+
+```python
+head_loss_plot_data(q_start, q_end, n)
+flow_rate_plot_data(delta_h_start, delta_h_end, n)
+```
+
+These helpers return equally spaced inputs together with the function values,
+derivatives and tendencies needed to plot `ΔH(Q)` or `Q(ΔH)` directly.
 
 When tabulated data is modified, the internal interpolation or regression model
 is rebuilt automatically.
